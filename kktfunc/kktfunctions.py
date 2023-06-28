@@ -2,6 +2,7 @@ import json
 from logging import raiseExceptions
 #from kktfunc.initkkt import initkkt
 from libfptr10 import IFptr
+from sql.sqlfunc import *
 
 def returnDict(success: bool, errorDesc: str, fptr: IFptr):
     return {'succes':success, 'descr':errorDesc, 'driver': fptr}
@@ -26,13 +27,7 @@ def checkdm(fptr):
 def initKKT(settings: dict[str, any]):
     fptr = IFptr("")
     if not settings:
-    # TODO Тут если не получили настройки, тогда надо бы взять их из DB#
-        settings = {
-            IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_11F,
-            IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_COM,
-            IFptr.LIBFPTR_SETTING_COM_FILE: "COM5",
-            IFptr.LIBFPTR_SETTING_BAUDRATE: IFptr.LIBFPTR_PORT_BR_115200
-    }
+        settings = getkktsettings()
     fptr.setSettings(settings)
     fptr.open()
     if fptr.isOpened():
@@ -75,7 +70,7 @@ def closeShift(cashier: json, fptr: IFptr):
     if fptr.isOpened():
         fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
         fptr.report()
-        if fptr.errorCode == 0:
+        if fptr.errorCode() == 0:
             return returnDict(True, '', None)
         else:
             return returnDict(False, fptr.errorDescription(), None)
@@ -84,12 +79,45 @@ def closeShift(cashier: json, fptr: IFptr):
 
 #Получить настройки ККТ
 def getkktsettings():
-    settings = {
-    IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_11F,
-    IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_COM,
-    IFptr.LIBFPTR_SETTING_COM_FILE: "COM5",
-    IFptr.LIBFPTR_SETTING_BAUDRATE: IFptr.LIBFPTR_PORT_BR_115200}
-    return settings
+    current_settings = Settings.select().dicts()
+    settingdict = {}
+    if len(current_settings) > 0:
+        for current_setting in current_settings:
+            CURRENT_SETTING = IFptr.__getattribute__(IFptr, current_setting.get('setting'))
+            if CURRENT_SETTING != 'ComFile':
+                CURRENT_SETTING_VALUE = IFptr.__getattribute__(IFptr, current_setting.get('settingvalue'))
+            else:
+                CURRENT_SETTING_VALUE = current_setting.get('settingvalue')
+            settingdict[CURRENT_SETTING] = CURRENT_SETTING_VALUE
+        return settingdict
+    else:
+        default_settings = {
+        IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_11F,
+        IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_COM,
+        IFptr.LIBFPTR_SETTING_COM_FILE: "COM5",
+        IFptr.LIBFPTR_SETTING_BAUDRATE: IFptr.LIBFPTR_PORT_BR_115200}
+        return default_settings
+
+# Настройки с формы в словарь в аттрибутах класса
+def setkktsettingsfromform(formsettings):
+    settingsdict = {}
+    for current_setting in formsettings:
+        settingsdict[IFptr.__getattribute__(IFptr,current_setting)] = IFptr.__getattribute__(IFptr,formsettings[current_setting])
+    return settingsdict
+
+#Текущее состояние смены
+def checkShift(fptr: IFptr):
+    fptr.setParam(IFptr.LIBFPTR_PARAM_DATA_TYPE, IFptr.LIBFPTR_DT_STATUS)
+    fptr.queryData()
+    shiftState = fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_STATE)
+    if shiftState == IFptr.LIBFPTR_SS_CLOSED:
+        return returnDict(True, 'СменаЗакрыта', fptr)
+    elif shiftState == IFptr.LIBFPTR_SS_EXPIRED:
+        return returnDict(True, 'Смена истекла', fptr)
+    elif shiftState == IFptr.LIBFPTR_SS_OPENED:
+        return returnDict(True, 'Смена закрыта', fptr)
+    else:
+        return returnDict(False, f'Исключительная, не вернулось состояние {fptr.errorDescription()}', fptr)
 
 if __name__ == '__main__':
     print('Not for start')

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/static/images/favicons/favicon-32x32.png">
+    <link rel="stylesheet" href="\static\static\css\styles.css">
+    <title>Zen-soft</title>
+</head>
+<body>
+    <nav>
+        <div class="navbar">
+            <a href='/'><img class='logo' src='\static\static\images\og-image-default.png'></a>
+            <a class='nav_btn' href='/settings'>Настройка ККМ</a>
+        </div>
+    </nav> 
+
+    {% block buttons %} 
+        <div class='buttons'>
+            <form action="/openShift" method="POST">
+                <input class='btn' type='submit' value='Открыть смену'>
+            </form>    
+            <form action="/closeShift" method="POST">
+                <input class='btn' type='submit' value='Закрыть смену'>
+            </form> 
+        </div>
+    {% endblock %} 
+    {% block body %}  {% endblock %}
+    
+</body>
+</html>

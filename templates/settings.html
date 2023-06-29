@@ -3,76 +3,102 @@
 
 {% endblock %}
 {% block body %} 
+
+{% set list_of_models = {
+    "LIBFPTR_MODEL_ATOL_1F": 'АТОЛ 1Ф', 
+    "LIBFPTR_MODEL_ATOL_11F": 'АТОЛ 11Ф',
+    "LIBFPTR_MODEL_ATOL_15F": "АТОЛ 15Ф",
+    "LIBFPTR_MODEL_ATOL_20F": "АТОЛ 20Ф",
+    "LIBFPTR_MODEL_ATOL_22F": "АТОЛ 22Ф (АТОЛ FPrint-22ПТК)",
+    "LIBFPTR_MODEL_ATOL_22v2F": "АТОЛ 22 v2 Ф",
+    "LIBFPTR_MODEL_ATOL_25F": "АТОЛ 25Ф",
+    "LIBFPTR_MODEL_ATOL_27F": "АТОЛ 27Ф",
+    "LIBFPTR_MODEL_ATOL_30F": "АТОЛ 30Ф",
+    "LIBFPTR_MODEL_ATOL_42FS": "АТОЛ 42ФС",
+    "LIBFPTR_MODEL_ATOL_50F": "АТОЛ 50Ф",
+    "LIBFPTR_MODEL_ATOL_52F": "АТОЛ 52Ф",
+    "LIBFPTR_MODEL_ATOL_55F": "АТОЛ 55Ф",
+    "LIBFPTR_MODEL_ATOL_60F": "АТОЛ 60Ф",
+    "LIBFPTR_MODEL_ATOL_77F": "АТОЛ 77Ф",
+    "LIBFPTR_MODEL_ATOL_90F": "АТОЛ 90Ф",
+    "LIBFPTR_MODEL_ATOL_91F": "АТОЛ 91Ф",
+    "LIBFPTR_MODEL_ATOL_92F": "АТОЛ 92Ф",
+    "LIBFPTR_MODEL_ATOL_SIGMA_10": "АТОЛ Sigma 10",
+    "LIBFPTR_MODEL_ATOL_SIGMA_7F": "АТОЛ Sigma 7Ф",
+    "LIBFPTR_MODEL_ATOL_SIGMA_8F": "АТОЛ Sigma 8Ф",
+    "LIBFPTR_MODEL_KAZNACHEY_FA": "Казначей ФА",
+    "LIBFPTR_MODEL_ATOL_42FA": "АТОЛ 42ФА"
+
+    } 
+%}
+
+{% set list_of_ports = {
+    "LIBFPTR_PORT_COM": "COM-порт",
+    "LIBFPTR_PORT_USB": "USB",
+    "LIBFPTR_PORT_TCPIP": "TCP/IP",
+    "LIBFPTR_PORT_BLUETOOTH": "Bluetooth"
+    }
+%}
+
+{% set list_of_bauds = {
+    "LIBFPTR_PORT_BR_1200": "1200 бод",
+    "LIBFPTR_PORT_BR_2400": "2400 бод",
+    "LIBFPTR_PORT_BR_4800": "4800 бод",
+    "LIBFPTR_PORT_BR_9600": "9600 бод",
+    "LIBFPTR_PORT_BR_19200": "19200 бод",
+    "LIBFPTR_PORT_BR_38400": "38400 бод",
+    "LIBFPTR_PORT_BR_57600": "57600 бод",
+    "LIBFPTR_PORT_BR_115200": "115200 бод",
+    "LIBFPTR_PORT_BR_320400": "320400 бод",
+    "LIBFPTR_PORT_BR_460800": "460800 бод",
+    "LIBFPTR_PORT_BR_921600": "921600 бод"
+    }
+%}
+
 <form class='settings_form' action="/settings" method="post">
         <div class='column'>
         <!--<div class='row1'>-->
-            <b><label for="LIBFPTR_SETTING_MODEL">Модель ККТ</label></b>
-            <p class='settings_select'><select class='select_list' name="LIBFPTR_SETTING_MODEL" id="LIBFPTR_SETTING_MODEL" required="required">
+             <b><label for="LIBFPTR_SETTING_MODEL">Модель ККТ</label></b>
+            <p class='settings_select'><select class='select_list' name="LIBFPTR_SETTING_MODEL" id="LIBFPTR_SETTING_MODEL" required="required" value=model_value>
                 <option value="">Выберите модель</option>
-                <option value="LIBFPTR_MODEL_ATOL_1F">АТОЛ 1Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_11F">АТОЛ 11Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_15F">АТОЛ 15Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_20F">АТОЛ 20Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_22F">АТОЛ 22Ф (АТОЛ FPrint-22ПТК)</option>
-                <option value="LIBFPTR_MODEL_ATOL_22v2F">АТОЛ 22 v2 Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_25F">АТОЛ 25Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_27F">АТОЛ 27Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_30F">АТОЛ 30Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_42FS">АТОЛ 42ФС</option>
-                <option value="LIBFPTR_MODEL_ATOL_50F">АТОЛ 50Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_52F">АТОЛ 52Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_55F">АТОЛ 55Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_60F">АТОЛ 60Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_77F">АТОЛ 77Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_90F">АТОЛ 90Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_91F">АТОЛ 91Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_92F">АТОЛ 92Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_SIGMA_10">АТОЛ Sigma 10</option>
-                <option value="LIBFPTR_MODEL_ATOL_SIGMA_7F">АТОЛ Sigma 7Ф</option>
-                <option value="LIBFPTR_MODEL_ATOL_SIGMA_8F">АТОЛ Sigma 8Ф</option>
-                <option value="LIBFPTR_MODEL_KAZNACHEY_FA">Казначей ФА</option>
-                <option value="LIBFPTR_MODEL_ATOL_42FA">АТОЛ 42ФА</option>
+                {% for key, value in list_of_models.items() %}
+                    <option value={{ key }} {% if model == key %}selected{% endif %}>{{ value }}</option>
+                {% endfor %}
+                
             </select></p>
 
             <b><label for="LIBFPTR_SETTING_PORT">Способ связи с ККТ</label></b>
             <p class='settings_select'><select class='select_list' name="LIBFPTR_SETTING_PORT" id="LIBFPTR_SETTING_PORT " required="required">
                 <option value="">Выберите способ связи</option>
-                <option value="LIBFPTR_PORT_COM">COM-порт</option>
-                <option value="LIBFPTR_PORT_USB">USB</option>
-                <option value="LIBFPTR_PORT_TCPIP">TCP/IP</option>
-                <option value="LIBFPTR_PORT_BLUETOOTH">Bluetooth</option>
-                
+                {% for key, value in list_of_ports.items() %}
+                    <option value={{ key }} {% if port == key %}selected{% endif %}>{{ value }}</option>
+                {% endfor %}                
             </select></p>
             
         <!--</div>-->
         <div class='row2'>
-            <p><input type="submit" value="Проверить соединение" class='btn_settings' formmethod='post' formaction='/checkstatus'></p>
+            <p><input type="submit" value="Проверить соединение" class='btn_settings' formmethod='post' formaction='/check'></p>
         </div>
     </div>
     <div class='column'>
+
         <b><label for="LIBFPTR_SETTING_COM_FILE">Идентификатор порта</label></b>
-            <p class='settings_select'><input class='select_list' type="text" size="25" id='LIBFPTR_SETTING_COM_FILE' name='LIBFPTR_SETTING_COM_FILE' placeholder="Введите номер COM-порта" required></p>
+             {% if com %}
+                {% set com_file = com %}
+            {% endif %}
+            <p class='settings_select'><input class='select_list' {% if com %}value={% endif %}{{ com_file }} type="text" size="25" id='LIBFPTR_SETTING_COM_FILE' name='LIBFPTR_SETTING_COM_FILE' placeholder="Введите номер COM-порта" required></p>
         
         
         <b><label for="LIBFPTR_SETTING_BAUDRATE">Скорость работы ККТ по RS232</label></b>
         <p class='settings_select'><select class='select_list' name="LIBFPTR_SETTING_BAUDRATE" id="LIBFPTR_SETTING_BAUDRATE " required="required">
             <option value="">Выберите скорость</option>
-            <option value="LIBFPTR_PORT_BR_1200">1200 бод</option>
-            <option value="LIBFPTR_PORT_BR_2400">2400 бод</option>
-            <option value="LIBFPTR_PORT_BR_4800">4800 бод</option>
-            <option value="LIBFPTR_PORT_BR_9600">9600 бод</option>
-            <option value="LIBFPTR_PORT_BR_19200">19200 бод</option>
-            <option value="LIBFPTR_PORT_BR_38400">38400 бод</option>
-            <option value="LIBFPTR_PORT_BR_57600">57600 бод</option>
-            <option value="LIBFPTR_PORT_BR_115200">115200 бод</option>
-            <option value="LIBFPTR_PORT_BR_320400">320400 бод</option>
-            <option value="LIBFPTR_PORT_BR_460800">460800 бод</option>
-            <option value="LIBFPTR_PORT_BR_921600">921600 бод</option>
+            {% for key, value in list_of_bauds.items() %}
+                    <option value={{ key }} {% if baud == key %}selected{% endif %}>{{ value }}</option>
+                {% endfor %}       
         </select></p>
         <div class='row2'>
             <p><input type="submit" value="Сохранить" class='btn_settings {{ disabled }}' formmethod='post' formaction='/settings' {{ disabled }}></p>
         </div>
     </div>
-</form>
 </form>
 {% endblock %}

@@ -12,14 +12,14 @@ nav {
     color:gray;
     margin: 2vh 2vw;
     height: 5vh;
-    padding-top: 2vh;
+    padding: 2vh 0;
     display: flex;
     flex-direction: row;
     align-items: center;
 }
 
 .logo {
-    height: 9vh;
+    height: 10vh;
 }
 
 .nav_btn {
@@ -80,16 +80,6 @@ nav {
     width: 20vw;
 }
 
-/* .row1 {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-evenly;
-    font-size: 2vh;
-    font-family: Times New Roman;
-    padding: 3vh;
-    margin: 0 6vw;
-
-} */
 
 .column {
     display: flex;
@@ -121,4 +111,46 @@ nav {
 .btn_settings.disabled {
     color: rgb(63, 63, 63);
     background-color: rgb(170, 184, 196);
+}
+
+.table_props {
+    border: 2px solid;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin: auto;
+    padding-top: 2hv;
+    background-color: #e495e4;
+
+}
+
+tr, td, th {
+    width: 20vw;
+    height: 4vh;
+    border: 2px solid;
+    padding: 1vh;
+    text-align: center;
+}
+
+th {
+    color: rgb(0, 0, 0);
+    background-color: rgb(196, 227, 255);
+    font-size: 2vh;
+    font-style: bold;
+    font-family: Times New Roman;
+}
+
+tr, td {
+    color: rgb(0, 0, 0);
+    /* background-color: rgb(255, 255, 255); */
+    font-size: 2vh;
+    font-style: normal;
+    font-family: Times New Roman;
+}
+
+tbody tr:nth-child(odd) {
+    background-color: rgb(222, 240, 255);
+}
+
+tbody tr:nth-child(even) {
+    background-color:rgb(239, 248, 255);
 }

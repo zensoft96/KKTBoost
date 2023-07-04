@@ -20,6 +20,22 @@ def hello():
     else:
         return True
 
+@app.route("/props", methods=['POST', 'GET'])
+def props():
+    if request.method == 'POST':
+        pass
+    elif request.method == 'GET':
+        initedkkt = kkt.initKKT(None)
+        if initedkkt.get('succes'):
+            driver = initedkkt.get('driver')
+            kkt_props = kkt.kktproperties(driver)
+            return render_template("props.html", allprops = props)
+        else:
+            flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+            
+    else:
+        return 'Error method'
+
 @app.route("/settings", methods=['POST','GET'])
 def settings():
     if request.method == 'POST':

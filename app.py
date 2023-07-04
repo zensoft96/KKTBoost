@@ -60,7 +60,10 @@ def checkstatus():
     if request.content_type == 'application/x-www-form-urlencoded':
         settings = kkt.setkktsettingsfromform(request.form)
         initedkkt = kkt.initKKT(settings)
-        return render_template('settings.html', **request.form, tested = initedkkt.get('succes'), error = initedkkt.get('descr'))
+        return render_template('settings.html', model=settings.get('Model'),
+                                   port = settings.get('Port'), 
+                                   com = settings.get('ComFile'), 
+                                   baud = settings.get('BaudRate'), tested = initedkkt.get('succes'), error = initedkkt.get('descr'))
         
 @app.route("/openShift", methods=['POST'])
 def openShift():

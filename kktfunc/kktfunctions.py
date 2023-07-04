@@ -3,25 +3,44 @@ from logging import raiseExceptions
 #from kktfunc.initkkt import initkkt
 from libfptr10 import IFptr
 from sql.sqlfunc import *
+from time import time
 
 def returnDict(success: bool, errorDesc: str, fptr: IFptr):
     return {'succes':success, 'descr':errorDesc, 'driver': fptr}
 
 #Проверка кода маркировки
 def checkdm(fptr):
+    start_time = time()
+    fptr.cancelMarkingCodeValidation()
+
     fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, '014494550435306821QXYXSALGLMYQQ\u001D91EE06\u001D92YWCXbmK6SN8vvwoxZFk7WAY8WoJNMGGr6Cgtiuja04c=')
-    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 2)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, 1.000)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, '014494550435306821QXYXSALGLMYQQ\u001D91EE06\u001D92YWCXbmK6SN8vvwoxZFk7WAY9WoJNMGGr6Cgtiuja04c=')
+    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, '04603731175250\u001DTI4K_aiAAAA\u001D0m3r')
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, 'ЗАЛУПА')
+    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, 1.000)
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
     fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_FRACTIONAL_QUANTITY, '1/2')
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_FRACTIONAL_QUANTITY, '1/2')
     fptr.beginMarkingCodeValidation()
+
     while True:
+        current_time = time()
         fptr.getMarkingCodeValidationStatus()
         if fptr.getParamBool(IFptr.LIBFPTR_PARAM_MARKING_CODE_VALIDATION_READY):
             break
+        if int(current_time - start_time) >= 30:
+            break
     validationResult = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+    isRequestSent = fptr.getParamBool(IFptr.LIBFPTR_PARAM_IS_REQUEST_SENT)
+    error = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR)
+    errorDescription = fptr.getParamString(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR_DESCRIPTION)
+    info = fptr.getParamInt(2109)
+    processingResult = fptr.getParamInt(2005)
+    processingCode = fptr.getParamInt(2105)
+    fptr.acceptMarkingCode()
+    result = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+    return(validationResult)
 
 #Инициализация ККТ 
 def initKKT(settings: dict[str, any]):
@@ -102,7 +121,11 @@ def getkktsettings():
 def setkktsettingsfromform(formsettings):
     settingsdict = {}
     for current_setting in formsettings:
-        settingsdict[IFptr.__getattribute__(IFptr,current_setting)] = IFptr.__getattribute__(IFptr,formsettings[current_setting])
+        if IFptr.__getattribute__(IFptr, current_setting)  != 'ComFile':
+            settingsdict[IFptr.__getattribute__(IFptr,current_setting)] = IFptr.__getattribute__(IFptr,formsettings[current_setting])
+        else:
+            settingsdict[IFptr.__getattribute__(IFptr,current_setting)] = formsettings[current_setting]
+            
     return settingsdict
 
 #Текущее состояние смены

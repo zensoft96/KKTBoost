@@ -1,0 +1,156 @@
+* {
+    padding: 0;
+    margin: 0;
+}
+
+nav {
+    background-color: rgb(196, 227, 255);
+
+}
+
+.navbar {
+    color:gray;
+    margin: 2vh 2vw;
+    height: 5vh;
+    padding: 2vh 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.logo {
+    height: 10vh;
+}
+
+.nav_btn {
+    color: rgb(0, 0, 0);
+    font-size: 3vh;
+    font-style: normal;
+    font-family: Times New Roman;
+    margin: 0 5vw;
+    text-decoration: none;
+    
+}
+
+.nav_btn:hover{
+    color: rgb(81, 157, 255);
+
+}
+
+.btn {
+    color: rgb(0, 0, 0);
+    background-color: rgb(196, 227, 255);
+    font-size: 2vh;
+    font-style: normal;
+    font-family: Times New Roman;
+    width: 15vw;
+    height: 10vh;
+    margin-top: 2vh;
+}
+
+.btn:hover{
+    color: rgb(255, 255, 255);
+    background-color: rgb(81, 157, 255);
+}
+
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-content: center;
+}
+
+.settings_form {
+    width: 80vw;
+    margin: 0 10vw;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+}
+
+.settings_select {
+    padding: 2vh 0;
+    /* border: 0.1em solid #579aff; */
+}
+
+.select_list {
+    border: 0.1em solid #ffffff;
+    background-color: rgb(196, 227, 255);
+    height: 3vh;
+    width: 20vw;
+}
+
+
+.column {
+    display: flex;
+    flex-direction: column;
+
+}
+
+.row2 {
+    padding: 0 1.5vh;
+}
+
+.btn_settings {
+    width: 18vw;
+    height: 6vh;
+    color: rgb(0, 0, 0);
+    background-color: rgb(196, 227, 255);
+    font-size: 2vh;
+    font-style: normal;
+    font-family: Times New Roman;
+    
+    margin-top: 2vh;
+}
+
+.btn_settings:hover {
+    color: rgb(255, 255, 255);
+    background-color: rgb(81, 157, 255);
+}
+
+.btn_settings.disabled {
+    color: rgb(63, 63, 63);
+    background-color: rgb(170, 184, 196);
+}
+
+.table_props {
+    border: 2px solid;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin: auto;
+    padding-top: 2hv;
+    background-color: #e495e4;
+
+}
+
+tr, td, th {
+    width: 20vw;
+    height: 4vh;
+    border: 2px solid;
+    padding: 1vh;
+    text-align: center;
+}
+
+th {
+    color: rgb(0, 0, 0);
+    background-color: rgb(196, 227, 255);
+    font-size: 2vh;
+    font-style: bold;
+    font-family: Times New Roman;
+}
+
+tr, td {
+    color: rgb(0, 0, 0);
+    /* background-color: rgb(255, 255, 255); */
+    font-size: 2vh;
+    font-style: normal;
+    font-family: Times New Roman;
+}
+
+tbody tr:nth-child(odd) {
+    background-color: rgb(222, 240, 255);
+}
+
+tbody tr:nth-child(even) {
+    background-color:rgb(239, 248, 255);
+}

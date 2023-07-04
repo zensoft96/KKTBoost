@@ -1,3 +1,4 @@
+from crypt import methods
 from flask import Flask, flash, redirect, request, render_template
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
@@ -19,6 +20,15 @@ def hello():
         return render_template('index.html')
     else:
         return True
+
+@app.route("/props", methods=['POST', 'GET'])
+def props():
+    if request.method == 'POST':
+        pass
+    elif request.method == 'GET':
+        pass
+    else:
+        return 'Error method'
 
 @app.route("/settings", methods=['POST','GET'])
 def settings():

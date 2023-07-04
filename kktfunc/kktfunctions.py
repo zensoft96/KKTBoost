@@ -53,61 +53,62 @@ def document_type(LIBFPTR_PARAM_DOCUMENT_TYPE: IFptr.LIBFPTR_PARAM_DOCUMENT_TYPE
 def kktproperties(fptr: IFptr):
     fptr.setParam(IFptr.LIBFPTR_PARAM_DATA_TYPE, IFptr.LIBFPTR_DT_STATUS)
     fptr.queryData()
+    dict_to_return = {}
     #Номер кассира
-    operatorID      = fptr.getParamInt(IFptr.LIBFPTR_PARAM_OPERATOR_ID)
+    dict_to_return['operatorID']      = fptr.getParamInt(IFptr.LIBFPTR_PARAM_OPERATOR_ID)
     #Номер ККТ в магазине
-    logicalNumber   = fptr.getParamInt(IFptr.LIBFPTR_PARAM_LOGICAL_NUMBER)
+    dict_to_return['logicalNumber']   = fptr.getParamInt(IFptr.LIBFPTR_PARAM_LOGICAL_NUMBER)
     #Состояние смены
-    shiftClosed = IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_CLOSED
-    shiftOpened = IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_OPENED
-    shiftExpired = IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_EXPIRED
+    dict_to_return['shiftClosed']= IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_CLOSED
+    dict_to_return['shiftOpened'] = IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_OPENED
+    dict_to_return['shiftExpired'] = IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_EXPIRED
     #Модель
-    model           = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MODEL)
+    dict_to_return['model']           = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MODEL)
     #Режим ККТ
-    mode            = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MODE)
+    dict_to_return['mode']            = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MODE)
     #Подрежим ККТ
-    submode         = fptr.getParamInt(IFptr.LIBFPTR_PARAM_SUBMODE)
+    dict_to_return['submode']         = fptr.getParamInt(IFptr.LIBFPTR_PARAM_SUBMODE)
     #Номер чека
-    receiptNumber   = fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)
+    dict_to_return['receiptNumber']   = fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)
     #Номер документа
-    documentNumber  = fptr.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_NUMBER)
+    dict_to_return['documentNumber']  = fptr.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_NUMBER)
     #Номер смены
-    shiftNumber     = fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER)
+    dict_to_return['shiftNumber']     = fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER)
     #Тип открытого чека
-    receiptType     = receipt_type(fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE))
+    dict_to_return['receiptType']     = receipt_type(fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE))
     #Тип открытого документа
-    documentType    = document_type(fptr.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_TYPE))
+    dict_to_return['documentType']    = document_type(fptr.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_TYPE))
     #ККТ Зарегистрирована
-    isFiscalDevice          = fptr.getParamBool(IFptr.LIBFPTR_PARAM_FISCAL)
+    dict_to_return['isFiscalDevice']          = fptr.getParamBool(IFptr.LIBFPTR_PARAM_FISCAL)
     #ФН Фискализован
-    isFiscalFN              = fptr.getParamBool(IFptr.LIBFPTR_PARAM_FN_FISCAL)
+    dict_to_return['isFiscalFN']              = fptr.getParamBool(IFptr.LIBFPTR_PARAM_FN_FISCAL)
     #ФН Присутствует
-    isFNPresent             = fptr.getParamBool(IFptr.LIBFPTR_PARAM_FN_PRESENT)
+    dict_to_return['isFNPresent']             = fptr.getParamBool(IFptr.LIBFPTR_PARAM_FN_PRESENT)
     #ФН НЕ Правильный
-    isInvalidFN             = fptr.getParamBool(IFptr.LIBFPTR_PARAM_INVALID_FN)
+    dict_to_return['isInvalidFN']             = fptr.getParamBool(IFptr.LIBFPTR_PARAM_INVALID_FN)
     #Бумага присутствует
-    isPaperPresent          = fptr.getParamBool(IFptr.LIBFPTR_PARAM_RECEIPT_PAPER_PRESENT)
+    dict_to_return['isPaperPresent']          = fptr.getParamBool(IFptr.LIBFPTR_PARAM_RECEIPT_PAPER_PRESENT)
     #Бумага заканчивается
-    isPaperNearEnd          = fptr.getParamBool(IFptr.LIBFPTR_PARAM_PAPER_NEAR_END)
+    dict_to_return['isPaperNearEnd']          = fptr.getParamBool(IFptr.LIBFPTR_PARAM_PAPER_NEAR_END)
     #Крышка открыта
-    isCoverOpened           = fptr.getParamBool(IFptr.LIBFPTR_PARAM_COVER_OPENED)
+    dict_to_return['isCoverOpened']           = fptr.getParamBool(IFptr.LIBFPTR_PARAM_COVER_OPENED)
     #Потеряно соединение с печатным механизмом
-    isPrinterConnectionLost = fptr.getParamBool(IFptr.LIBFPTR_PARAM_PRINTER_CONNECTION_LOST)
+    dict_to_return['isPrinterConnectionLost'] = fptr.getParamBool(IFptr.LIBFPTR_PARAM_PRINTER_CONNECTION_LOST)
     #Невосстановимая ошибка печатного механизма
-    isPrinterError          = fptr.getParamBool(IFptr.LIBFPTR_PARAM_PRINTER_ERROR)
+    dict_to_return['isPrinterError']          = fptr.getParamBool(IFptr.LIBFPTR_PARAM_PRINTER_ERROR)
     #Перегрев ККТ
-    isPrinterOverheat       = fptr.getParamBool(IFptr.LIBFPTR_PARAM_PRINTER_OVERHEAT)
+    dict_to_return['isPrinterOverheat']       = fptr.getParamBool(IFptr.LIBFPTR_PARAM_PRINTER_OVERHEAT)
     #ККТ Заблокирована из-за ошибок
-    isDeviceBlocked         = fptr.getParamBool(IFptr.LIBFPTR_PARAM_BLOCKED)
+    dict_to_return['isDeviceBlocked']         = fptr.getParamBool(IFptr.LIBFPTR_PARAM_BLOCKED)
     #Дата Время на кассе
-    dateTime = fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)
+    dict_to_return['dateTime'] = fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)
     #Серийный номер ККТ
-    serialNumber    = fptr.getParamString(IFptr.LIBFPTR_PARAM_SERIAL_NUMBER)
+    dict_to_return['serialNumber']    = fptr.getParamString(IFptr.LIBFPTR_PARAM_SERIAL_NUMBER)
     #Имя модели ККТ
-    modelName       = fptr.getParamString(IFptr.LIBFPTR_PARAM_MODEL_NAME)
+    dict_to_return['modelName']       = fptr.getParamString(IFptr.LIBFPTR_PARAM_MODEL_NAME)
     #Номер прошивки ККТ
-    firmwareVersion = fptr.getParamString(IFptr.LIBFPTR_PARAM_UNIT_VERSION)
-    
+    dict_to_return['firmwareVersion'] = fptr.getParamString(IFptr.LIBFPTR_PARAM_UNIT_VERSION)
+    return dict_to_return
     
 def kktfatalerrors(fptr: IFptr):
     fptr.setParam(IFptr.LIBFPTR_PARAM_DATA_TYPE, IFptr.LIBFPTR_DT_FATAL_STATUS)

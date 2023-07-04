@@ -1,4 +1,3 @@
-from crypt import methods
 from flask import Flask, flash, redirect, request, render_template
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
@@ -26,7 +25,14 @@ def props():
     if request.method == 'POST':
         pass
     elif request.method == 'GET':
-        pass
+        initedkkt = kkt.initKKT(None)
+        if initedkkt.get('succes'):
+            driver = initedkkt.get('driver')
+            kkt_props = kkt.kktproperties(driver)
+            return render_template("props.html", allprops = props)
+        else:
+            flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+            
     else:
         return 'Error method'
 

@@ -180,5 +180,5 @@ if __name__ == "__main__":
     sqlsettings = Settings()
     sqlsettings.create_table(safe=True)
     app.secret_key = 'hjaskjdhkjasdhjahdkhakjdhqwkhJHHKHY*(Y*Y*(*Y))'
-    app.run(debug=True, port=5000, host="0.0.0.0")
+    app.run(debug=False, port=5000, host="0.0.0.0")
     

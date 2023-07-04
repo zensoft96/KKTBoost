@@ -59,9 +59,9 @@ def kktproperties(fptr: IFptr):
     #Номер ККТ в магазине
     dict_to_return['logicalNumber']   = fptr.getParamInt(IFptr.LIBFPTR_PARAM_LOGICAL_NUMBER)
     #Состояние смены
-    dict_to_return['shiftClosed']= IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_CLOSED
-    dict_to_return['shiftOpened'] = IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_OPENED
-    dict_to_return['shiftExpired'] = IFptr.LIBFPTR_PARAM_SHIFT_STATE == IFptr.LIBFPTR_SS_EXPIRED
+    dict_to_return['shiftClosed']= fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_STATE) == IFptr.LIBFPTR_SS_CLOSED
+    dict_to_return['shiftOpened'] = fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_STATE) == IFptr.LIBFPTR_SS_OPENED
+    dict_to_return['shiftExpired'] = fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_STATE) == IFptr.LIBFPTR_SS_EXPIRED
     #Модель
     dict_to_return['model']           = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MODEL)
     #Режим ККТ

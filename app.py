@@ -29,7 +29,7 @@ def props():
         if initedkkt.get('succes'):
             driver = initedkkt.get('driver')
             kkt_props = kkt.kktproperties(driver)
-            return render_template("props.html", allprops = props)
+            return render_template("props.html", allprops = kkt_props)
         else:
             flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
             

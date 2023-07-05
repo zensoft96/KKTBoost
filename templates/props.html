@@ -9,12 +9,14 @@
         <th>Свойство</th>
         <th>Значение</th>
     </tr>
-    <tr><td>Ляля</td><td>Муму</td></tr>
-    <tr><td>Ляля</td><td>Муму</td></tr>
-    <tr><td>Ляля</td><td>Муму</td></tr>
-    <tr><td>Ляля</td><td>Муму</td></tr>
-    <tr><td>Ляля</td><td>Муму</td></tr>
-    <tr><td>Ляля</td><td>Муму</td></tr>
+    {% for key, value in allprops %}
+        <tr><td>{{key}}</td><td>{{value}}</td></tr>
+        {% comment %} <tr><td>Ляля</td><td>Муму</td></tr>
+        <tr><td>Ляля</td><td>Муму</td></tr>
+        <tr><td>Ляля</td><td>Муму</td></tr>
+        <tr><td>Ляля</td><td>Муму</td></tr>
+        <tr><td>Ляля</td><td>Муму</td></tr> {% endcomment %}
+    {% endfor %}
 </table>
 
 

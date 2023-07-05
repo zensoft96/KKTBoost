@@ -36,6 +36,21 @@ def props():
     else:
         return 'Error method'
 
+#Проверка кода маркировки json
+@app.route("/checkmark", methods=['POST'])
+def checkmark():
+    if request.content_type == 'application/json':
+        markCode = request.json.get('code')
+        if markCode is not None:
+            initedkkt = kkt.initKKT(None)
+            if initedkkt.get('succes'):
+                driver = initedkkt.get('driver')
+                #TODO Функция не принимает сейчас сам код, только экземпляр драйвера, надо поправить
+                return json.dumps(kkt.checkdm(driver))
+            else:
+                return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+            
+
 @app.route("/settings", methods=['POST','GET'])
 def settings():
     if request.method == 'POST':

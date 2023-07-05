@@ -1,7 +1,7 @@
 from kktfunc.initkkt import initkkt
 from libfptr10 import IFptr
 fptr = initkkt
-
+#ggg
 
 print(fptr.version())
 settings = {

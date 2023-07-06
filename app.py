@@ -49,7 +49,8 @@ def checkmark():
                 return json.dumps(kkt.checkdm(driver))
             else:
                 return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
-            
+        else:
+            return 'Не правильный запрос'    
 
 @app.route("/settings", methods=['POST','GET'])
 def settings():

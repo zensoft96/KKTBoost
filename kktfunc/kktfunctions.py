@@ -1,15 +1,154 @@
+from ast import If
 import json
 from logging import raiseExceptions
+from itsdangerous import base64_decode
 #from kktfunc.initkkt import initkkt
 from libfptr10 import IFptr
 from sql.sqlfunc import *
 from time import time
 
 def returnDict(success: bool, errorDesc: str, fptr: IFptr):
+    """Возвращает словарь с параметрами выполнения функции
+
+    Args:
+        success (bool): Успешна ли прошла операция
+        errorDesc (str): Описание ошибки
+        fptr (IFptr): Экземпляр класса IFptr, драйвер ККТ
+
+    Returns:
+        dict : Словарь с аргументами
+    """    
     return {'succes':success, 'descr':errorDesc, 'driver': fptr}
 
-# Возврат типа чека, либо чек закрыт
+def fnmKeys():
+    pass
+
+def checkTypeClass(checkType):
+    checkTypes = {
+        "SELL":IFptr.LIBFPTR_RT_SELL,
+        "SELLRETURN": IFptr.LIBFPTR_RT_SELL_RETURN,
+        "SELLCORR": IFptr.LIBFPTR_RT_SELL_CORRECTION,
+        "SELLRETURNCORR": IFptr.LIBFPTR_RT_SELL_RETURN_CORRECTION,
+        "BUY":IFptr.LIBFPTR_RT_BUY,
+        "BUYRETURN":IFptr.LIBFPTR_RT_BUY_RETURN,
+        "BUYCORR": IFptr.LIBFPTR_RT_BUY_CORRECTION,
+        "BUYRETURNCORR": IFptr.LIBFPTR_RT_BUY_RETURN_CORRECTION
+    }
+    return checkTypes.get(checkType)
+
+def snoClass(sno):
+    snoDict = {
+        0:IFptr.LIBFPTR_TT_OSN,
+        1:IFptr.LIBFPTR_TT_USN_INCOME,
+        2:IFptr.LIBFPTR_TT_USN_INCOME_OUTCOME,
+        3:IFptr.LIBFPTR_TT_ESN,
+        4:IFptr.LIBFPTR_TT_PATENT
+            }
+    return snoDict[sno]
+
+def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
+            cashelesssum: float):
+    """Формирование чека состоит из следующих операций:
+    открытие чека и передача реквизитов чека;
+    регистрация позиций, печать нефискальных данных (текст, штрихкоды, изображения);
+    регистрация итога (необязательный пункт - если регистрацию итога не провести, он автоматически рассчитается из суммы всех позиций);
+    регистрация налогов на чек (необязательный пункт - налоги могут быть подтянуты из позиций и суммированы);
+    регистрация оплат;
+    закрытие чека;
+    проверка состояния чека.
+    
+    Args:
+        checkType (str): Тип чека, ждем аргументы SELL - чек продажи, SELLRETURN - чек возврата, SELLCORR - чек коррекции,
+        SELLRETURNCORR - чек кореекции возврата, BUY - чек расхода(покупки), BUYCORR - Чек коррекции расхода, 
+        BUYRETURNCORR - Чек коррекции возврата расхода, BUYRETURN - Чек возврата расхода(покупки),
+        cashier (dict): Кассир, словарь, {cashierName: Иванов А.А., INN: ИННКассира}
+        fptr (IFptr): Текущий драйвер ККТ
+        electronnically (bool): Печатать чек электронно(не на бумаге)
+        sno (int): Система налогообложения, 0 - Общая, 1 - УСН Доход, 2 - УСН Доход-Расход, 3 - ЕНВД, 4 - ЕСХН, 5 - Патент
+        goods (list): Список с товарами(словарь)
+        cash (bool): Наличный, безналичный
+    """    
+    fptr.setParam(1021, cashier['cashierName'])
+    fptr.setParam(1203, cashier['INN'])
+    fptr.operatorLogin()
+    
+    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, checkTypeClass(checkType=checkType))
+    #Печатать электронный чек
+    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, electronnically)
+    #Налогообложение
+    fptr.setParam(1055, snoClass(sno=sno))
+    fptr.openReceipt()
+    
+    #Регистрация позиции с кодом маркировки сделать столько итераций сколько товаров
+    #Соглашение, жду в словаре name - Имя товара, price - цена, quantity - количество
+    # tax - Налоговая ставка, sum - Сумма, markingCode - Код маркировки(массив байт в base64)
+    for good in goods:
+        fptr.setParam(IFptr.LIBFPTR_PARAM_COMMODITY_NAME, good['name'])
+        fptr.setParam(IFptr.LIBFPTR_PARAM_PRICE, good['price'])
+        fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, good['quantity'])
+        if good['tax'] == 20:
+            fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
+        elif good['tax'] == 0:
+            fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_NO)
+        else:
+            #TODO По умолчанию 20%, надо проработать
+            fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, good['sum'])
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, ['markingcode'])
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+        fptr.registration()
+    
+    if cashelesssum > 0:
+        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, cashelesssum)
+        fptr.payment()
+    elif cashsum > 0:
+        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CASH)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, cashsum)
+        fptr.payment()
+    else: return 'Нет сумм чека'
+    
+    #TODO торопимся выбить чек, потом проработать налоги
+    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
+    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 200.00)
+    fptr.receiptTax()
+
+    fptr.setParam(IFptr.LIBFPTR_PARAM_SUM, 1000.00)
+    fptr.receiptTotal()
+    #Закрытие полность оплаченного чека
+    fptr.closeReceipt()
+    
+    # Тут или после проверки? Очистка кодов из таблицы.
+    fptr.clearMarkingCodeValidationResult()
+    while fptr.checkDocumentClosed() < 0:
+        # Не удалось проверить состояние документа. Вывести пользователю текст ошибки, попросить устранить неполадку и повторить запрос
+        print(fptr.errorDescription())
+        return None
+    
+    if not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):
+        # Документ не закрылся. Требуется его отменить (если это чек) и сформировать заново
+        fptr.cancelReceipt()
+        return None
+
+    if not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_PRINTED):
+    # Можно сразу вызвать метод допечатывания документа, он завершится с ошибкой, если это невозможно
+        while fptr.continuePrint() < 0:
+            # Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.
+            print('Не удалось напечатать документ (Ошибка "%s"). Устраните неполадку и повторите.', fptr.errorDescription())
+            return None
+
+
 def receipt_type(LIBFPTR_PARAM_RECEIPT_TYPE: IFptr.LIBFPTR_PARAM_RECEIPT_TYPE):
+    """ Возврат типа чека, либо чек закрыт
+
+    Args:
+        LIBFPTR_PARAM_RECEIPT_TYPE (IFptr.LIBFPTR_PARAM_RECEIPT_TYPE): Тип чека
+
+    Returns:
+        str : Человекопонятный текст
+    """    
     states = {IFptr.LIBFPTR_RT_CLOSED : "чек закрыт",
     IFptr.LIBFPTR_RT_SELL : "чек прихода",
     IFptr.LIBFPTR_RT_SELL_RETURN : "чек возврата прихода",

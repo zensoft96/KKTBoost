@@ -407,10 +407,10 @@ def getkktsettings():
 def setkktsettingsfromform(formsettings):
     settingsdict = {}
     for current_setting in formsettings:
-        if IFptr.__getattribute__(IFptr, current_setting)  != 'ComFile':
-            settingsdict[IFptr.__getattribute__(IFptr,current_setting)] = IFptr.__getattribute__(IFptr,formsettings[current_setting])
-        else:
-            settingsdict[IFptr.__getattribute__(IFptr,current_setting)] = formsettings[current_setting]
+        # if IFptr.__getattribute__(IFptr, current_setting)  != 'ComFile':
+        #     settingsdict[current_setting] = formsettings[current_setting]
+        # else:
+        settingsdict[current_setting] = formsettings[current_setting]
             
     return settingsdict
 

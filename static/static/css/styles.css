@@ -154,3 +154,24 @@ tbody tr:nth-child(odd) {
 tbody tr:nth-child(even) {
     background-color:rgb(239, 248, 255);
 }
+
+.message_error {
+    padding: 3vw;
+    color: rgb(151, 21, 21);
+}
+
+.settings_form.row1 {
+    justify-content: flex-start;
+    margin-top: 2vh;
+    margin-left: 23vw;
+
+}
+
+.select_list.row1 {
+    width:53vw;
+}
+
+.button_center{
+    display: flex;
+    justify-content: center;
+}

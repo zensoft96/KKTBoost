@@ -36,8 +36,25 @@ def props():
     else:
         return 'Error method'
 
+#Проверка кода маркировки json
+@app.route("/checkmark", methods=['POST'])
+def checkmark():
+    if request.content_type == 'application/json':
+        markCode = request.json.get('code')
+        if markCode is not None:
+            initedkkt = kkt.initKKT(None)
+            if initedkkt.get('succes'):
+                driver = initedkkt.get('driver')
+                #TODO Функция не принимает сейчас сам код, только экземпляр драйвера, надо поправить
+                return json.dumps(kkt.checkdm(driver))
+            else:
+                return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+        else:
+            return 'Не правильный запрос'    
+
 @app.route("/settings", methods=['POST','GET'])
 def settings():
+    settingsdict = {}
     if request.method == 'POST':
         for i in request.form:
             current_settings = Settings.get_or_none(Settings.setting == i)
@@ -48,7 +65,13 @@ def settings():
                 current_settings.setting = i
                 current_settings.settingvalue = request.form[i]
                 current_settings.save()
-        return render_template('settings.html', disabled = 'disabled')
+            
+            settingsdict[current_settings.setting] = current_settings.settingvalue
+        return render_template('settings.html', disabled = 'disabled', 
+                               model=settingsdict.get('LIBFPTR_SETTING_MODEL'),
+                                   port = settingsdict.get('LIBFPTR_SETTING_PORT'), 
+                                   com = settingsdict.get('LIBFPTR_SETTING_COM_FILE'), 
+                                   baud = settingsdict.get('LIBFPTR_SETTING_BAUDRATE'))
     elif request.method == 'GET':
         current_settings = Settings.select().dicts()
         if len(current_settings) > 0:
@@ -76,10 +99,10 @@ def checkstatus():
     if request.content_type == 'application/x-www-form-urlencoded':
         settings = kkt.setkktsettingsfromform(request.form)
         initedkkt = kkt.initKKT(settings)
-        return render_template('settings.html', model=settings.get('Model'),
-                                   port = settings.get('Port'), 
-                                   com = settings.get('ComFile'), 
-                                   baud = settings.get('BaudRate'), tested = initedkkt.get('succes'), error = initedkkt.get('descr'))
+        return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
+                                   port = settings.get('LIBFPTR_SETTING_PORT'), 
+                                   com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
+                                   baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), tested = initedkkt.get('succes'), error = initedkkt.get('descr'))
         
 @app.route("/openShift", methods=['POST'])
 def openShift():

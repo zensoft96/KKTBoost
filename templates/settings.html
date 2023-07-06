@@ -97,8 +97,30 @@
                 {% endfor %}       
         </select></p>
         <div class='row2'>
+            {% if tested == False %}
+                {% set disabled = 'disabled' %}
+                {% set error_message = 'error' %}
+            
+            {% endif %}
             <p><input type="submit" value="Сохранить" class='btn_settings {{ disabled }}' formmethod='post' formaction='/settings' {{ disabled }}></p>
         </div>
+        
+    </div>
+    
+
+</form>
+<form class='settings_form row1' action="/settings" method="post">
+    <div class='row_setting'>
+        <b><label for="cashier">Кассир</label></b>
+        {% if cashier %}
+            {% set cashier_name = cashier %}
+        {% endif %}
+        <p class='settings_select'><input class='select_list row1' {% if cashier_name %}value={% endif %}{{ cashier }} type="text" size="25" id='cashier' name='cashier' placeholder="Введите кассира" required></p>
+        <div class='row2'>
+        <p class='button_center'><input type="submit" value="Сохранить данные" class='btn_settings' formmethod='post' formaction='/settings'></p>
+        </div>
+        
     </div>
 </form>
+<h2 class='message_error'>{{ error_message }}</h2>
 {% endblock %}

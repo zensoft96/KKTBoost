@@ -1,0 +1,6 @@
+**/__pycache__
+/env
+/.vscode
+settings.db
+zendb.db
+requirements.txt

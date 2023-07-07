@@ -2,11 +2,28 @@
 {% block buttons %} 
 
 {% endblock %}
-{% block body %} 
+{% block message %} 
     {% with messages = get_flashed_messages() %}
         {% if messages %}
             {% for message in messages %}
-                <h2 class='message_error'>{{ message }}</h2>
+                <dialog class='message_win' open>
+                <div class='message_win_content'>
+                    {{ message }}
+                
+                <button id="closeDialog" action='/openShift' method='GET'>ОК</button>
+                </div>
+                </dialog>
+                <script>
+                var dialog = document.querySelector('dialog')
+                dialog.show() // Показываем диалоговое окно
+                
+                document.querySelector(
+                    '#closeDialog'
+                ).onclick = function () {
+                    dialog.close() // Прячем диалоговое окно
+                }
+                </script>
+                
             {% endfor %}
         {% endif %}
     {% endwith %}

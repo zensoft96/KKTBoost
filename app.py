@@ -29,6 +29,7 @@ def props():
         if initedkkt.get('succes'):
             driver = initedkkt.get('driver')
             kkt_props = kkt.kktproperties(driver)
+            driver.close()
             return render_template("props.html", allprops = kkt_props)
         else:
             flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
@@ -46,7 +47,7 @@ def checkmark():
             if initedkkt.get('succes'):
                 driver = initedkkt.get('driver')
                 #TODO Функция не принимает сейчас сам код, только экземпляр драйвера, надо поправить
-                return json.dumps(kkt.checkdm(driver))
+                return json.dumps(kkt.checkdm(driver, markCode))
             else:
                 return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
         else:
@@ -102,7 +103,9 @@ def checkstatus():
         return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
-                                   baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), tested = initedkkt.get('succes'), error = initedkkt.get('descr'))
+                                   baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
+                                   tested = initedkkt.get('succes'), 
+                                   error = initedkkt.get('descr'))
         
 @app.route("/openShift", methods=['POST'])
 def openShift():
@@ -114,12 +117,12 @@ def openShift():
             if shiftresult.get('succes'):
                 driver.close()
                 flash('Успешно открыта')
-                return render_template('message.html')
+                return render_template('index.html')
             else:
                 errorstring = f'Ошибка при открытии смены {shiftresult.get("descr")}'
                 driver.close()
                 flash(errorstring)
-                return render_template('message.html')
+                return render_template('index.html')
     else:
         inpjson = request.json
         initedkkt = kkt.initKKT(None)
@@ -147,18 +150,18 @@ def closeShift():
                 if result.get('succes'):
                     driver.close()
                     flash('Успешно закрыта')
-                    return render_template('message.html')
+                    return render_template('index.html')
                 else:
                     driver.close()
                     flash(f'Ошибка закрытия {result.get("descr")}')
-                    return render_template('message.html')
+                    return render_template('index.html')
             else:
                 driver.close()
                 flash("Смена уже закрыта")
-                return render_template('message.html')
+                return render_template('index.html')
         else:
             flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
-            return render_template('message.html')
+            return render_template('index.html')
     else:
         inpjson = request.json
         initedkkt = kkt.initKKT(None)
@@ -197,7 +200,6 @@ def statusShift():
         
     else:
         return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
-        
 
 if __name__ == "__main__":
     sqlsettings = Settings()

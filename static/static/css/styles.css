@@ -1,11 +1,17 @@
+body {
+    z-index: 1;
+}
+
 * {
     padding: 0;
     margin: 0;
 }
 
-nav {
-    background-color: rgb(196, 227, 255);
-
+.navb {
+    background-color: #ffffff;
+    height: 12vh;
+    z-index: 100;
+    margin: 0;
 }
 
 .navbar {
@@ -16,6 +22,11 @@ nav {
     display: flex;
     flex-direction: row;
     align-items: center;
+    position: fixed; 
+    top: 0; 
+    width: 100%;
+    overflow: hidden;
+    background-color: rgb(196, 227, 255);
 }
 
 .logo {
@@ -35,6 +46,10 @@ nav {
 .nav_btn:hover{
     color: rgb(81, 157, 255);
 
+}
+
+.main {
+    
 }
 
 .btn {
@@ -174,4 +189,42 @@ tbody tr:nth-child(even) {
 .button_center{
     display: flex;
     justify-content: center;
+}
+
+.message_win{
+    width:100%;
+    min-height:100%;
+    background-color: rgba(0,0,0,0.5);
+    overflow:hidden;
+    position:fixed;
+    top:0px;
+
+}
+.message_win .message_win_content{
+    margin:40vh auto 0px auto;
+    width:20vw;
+    height: 15vh;
+    padding:1vh;
+    background-color: #c5c5c5;
+    border-radius:5px;
+    box-shadow: 0px 0px 10px #000;
+   
+
+}
+
+.message_win_content{
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    flex-direction: column;
+    color: rgb(0, 0, 0);
+    background-color: rgb(196, 227, 255);
+    font-size: 2vh;
+    font-style: normal;
+    font-family: Times New Roman;
+}
+
+#closeDialog {
+    width: 8vw;
+    height: 3vh;
 }

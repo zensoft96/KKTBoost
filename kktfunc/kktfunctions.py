@@ -292,16 +292,33 @@ def kktfatalerrors(fptr: IFptr):
     dateTime = fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)
     return dateTime
 
+def returnTextValidationResult (result):
+    text_results = {
+        '0' : "Проверка КП КМ не выполнена, статус товара ОИСМ не проверен [М]",
+        '1' : "Проверка КП КМ выполнена в ФН с отрицательным результатом, статус товара ОИСМ не проверен [М-]",
+        '3' : "Проверка КП КМ выполнена с положительным результатом, статус товара ОИСМ не проверен [М]",
+        '16' : "Проверка КП КМ не выполнена, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М]",
+        '17' : "Проверка КП КМ выполнена в ФН с отрицательным результатом, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М-]",
+        '19' : "Проверка КП КМ выполнена в ФН с положительным результатом, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М]",
+        '5' : "Проверка КП КМ выполнена с отрицательным результатом, статус товара у ОИСМ некорректен [М-]",
+        '7' : "Проверка КП КМ выполнена с положительным результатом, статус товара у ОИСМ некорректен [М-]",
+        '15' : "Проверка КП КМ выполнена с положительным результатом, статус товара у ОИСМ корректен [М+]"
 
+    }
+    try:
+        result = text_results[result]
+        return result
+    except:
+        return 'Не получен статус проверки'
     
 #Проверка кода маркировки
-def checkdm(fptr):
+def checkdm(fptr, DM_code):
     start_time = time()
     fptr.cancelMarkingCodeValidation()
 
     fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
     # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, '014494550435306821QXYXSALGLMYQQ\u001D91EE06\u001D92YWCXbmK6SN8vvwoxZFk7WAY9WoJNMGGr6Cgtiuja04c=')
-    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, '04603731175250\u001DTI4K_aiAAAA\u001D0m3r')
+    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, DM_code)
     # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, 'ЗАЛУПА')
     fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
     # fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, 1.000)
@@ -318,15 +335,15 @@ def checkdm(fptr):
         if int(current_time - start_time) >= 30:
             break
     validationResult = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
-    isRequestSent = fptr.getParamBool(IFptr.LIBFPTR_PARAM_IS_REQUEST_SENT)
-    error = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR)
-    errorDescription = fptr.getParamString(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR_DESCRIPTION)
-    info = fptr.getParamInt(2109)
-    processingResult = fptr.getParamInt(2005)
-    processingCode = fptr.getParamInt(2105)
+    # isRequestSent = fptr.getParamBool(IFptr.LIBFPTR_PARAM_IS_REQUEST_SENT)
+    # error = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR)
+    # errorDescription = fptr.getParamString(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR_DESCRIPTION)
+    # info = fptr.getParamInt(2109)
+    # processingResult = fptr.getParamInt(2005)
+    # processingCode = fptr.getParamInt(2105)
     fptr.acceptMarkingCode()
-    result = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
-    return(validationResult)
+    # result = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+    return(returnTextValidationResult(str(validationResult)))
 
 #Инициализация ККТ 
 def initKKT(settings: dict[str, any]):

@@ -93,14 +93,12 @@
         <p class='settings_select'><select class='select_list' name="LIBFPTR_SETTING_BAUDRATE" id="LIBFPTR_SETTING_BAUDRATE " required="required">
             <option value="">Выберите скорость</option>
             {% for key, value in list_of_bauds.items() %}
-                    <option value={{ key }} {% if baud == key %}selected{% endif %}>{{ value }}</option>
-                {% endfor %}       
+                <option value={{ key }} {% if baud == key %}selected{% endif %}>{{ value }}</option>
+            {% endfor %}       
         </select></p>
         <div class='row2'>
             {% if tested == False %}
                 {% set disabled = 'disabled' %}
-                {% set error_message = 'error' %}
-            
             {% endif %}
             <p><input type="submit" value="Сохранить" class='btn_settings {{ disabled }}' formmethod='post' formaction='/settings' {{ disabled }}></p>
         </div>
@@ -123,4 +121,36 @@
     </div>
 </form>
 <h2 class='message_error'>{{ error_message }}</h2>
+{% endblock %}
+{% block message %} 
+    {% if tested == False %}
+        {% set message = error %}
+    {% elif tested == True %}
+        {% set message = 'Проверка прошла успешно!' %}
+    {% endif %}
+    {% if tested == True or tested == False %}
+        
+                
+                
+        <dialog class='message_win' open>
+        <div class='message_win_content'>
+            {{ message }}
+        
+        <button id="closeDialog">ОК</button>
+        </div>
+        </dialog>
+        <script>
+        var dialog = document.querySelector('dialog')
+        dialog.show() // Показываем диалоговое окно
+        
+        document.querySelector(
+            '#closeDialog'
+        ).onclick = function () {
+            dialog.close() // Прячем диалоговое окно
+        }
+        </script>
+        
+
+    {% endif %}
+ 
 {% endblock %}

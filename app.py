@@ -183,12 +183,29 @@ def closeShift():
             
         
 @app.route("/receipt", methods=['POST'])
-def receipt(receiptData):
-    kkt = kkt.initkkt(None)
-    if kkt.isinstance(IFptr):
-        pass
-    else: #Возвращаем ошибку инциализации
-        return kkt
+def receipt():
+    initedkkt = kkt.initKKT(None)
+    if initedkkt.get('succes'):
+        try:
+            checkType = request.json['checkType']
+            electronnically = request.json['electronnically']
+            sno = request.json['sno']
+            cashsum = request.json['cashsum']
+            goods = request.json['goods']
+            cashier = request.json['cashier']
+            cashelesssum = request.json['cashelesssum']
+        except:
+            return 'Не все параметры пришли'
+        
+        driver = initedkkt.get('driver')
+        receiptResult = kkt.receipt(fptr=driver, checkType=checkType, 
+                                    cashier={'cashierName': cashier[0]['cashierName'],
+                                             'INN': cashier[0]['INN']},
+                                    electronnically=electronnically,
+                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum)
+        return(receiptResult)        
+    else:
+        return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
 
 @app.route("/statusShift", methods=['POST'])
 def statusShift():

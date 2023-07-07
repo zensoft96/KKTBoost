@@ -68,6 +68,9 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         goods (list): Список с товарами(словарь)
         cash (bool): Наличный, безналичный
     """    
+    # fptr.cancelMarkingCodeValidation()
+    for good in goods:
+        checkdm(fptr, good['markingcode'])
     
     sumerrors = "" #Для сбора промежуточных ошибок
     fptr.setParam(1021, cashier['cashierName'])
@@ -98,21 +101,33 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
             #TODO По умолчанию 20%, надо проработать
             fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
         
-        fptr.setParam(1212, 1) #Признак предмета расчета
+        fptr.setParam(1212, 31) #Признак предмета расчета
         """30 о реализуемом подакцизном товаре, подлежащем маркировке средством идентификации, не имеющем кода маркировки
             31 о реализуемом подакцизном товаре, подлежащем маркировке средством идентификации, имеющем код маркировки
             32 о реализуемом товаре, подлежащем маркировке средством идентификации, не имеющем кода маркировки, за исключением подакцизного товара
             33 о реализуемом товаре, подлежащем маркировке средством идентификации, имеющем код маркировки, за исключением подакцизного товара
         """
-        #fptr.setParam(1214, 4) #Признак способа расчета
+        fptr.setParam(1214, 4) #Признак способа расчета
         
         # fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 200.02)
-        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT_OTHER)
-        #fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
-        #fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
-        #fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, 5)
-        #fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
-        #fptr.registration()
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_WAIT_FOR_VALIDATION_RESULT, True)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT))
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+
+	
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_WAIT_FOR_VALIDATION_RESULT, True)
+        
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+        validationResult = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, validationResult)
+        
+        fptr.registration()
     
     if cashelesssum > 0:
         fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)
@@ -126,13 +141,13 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     
     #TODO торопимся выбить чек, потом проработать налоги
     fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 200.022)
+    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 2.00)
     fptr.receiptTax()
     if fptr.errorCode() > 0:
         sumerrors += f'\n {fptr.errorDescription()}'
 
-    #fptr.setParam(IFptr.LIBFPTR_PARAM_SUM, 1000.11)
-    #fptr.receiptTotal()
+    fptr.setParam(IFptr.LIBFPTR_PARAM_SUM, 10.00)
+    fptr.receiptTotal()
     #Закрытие полность оплаченного чека
     fptr.closeReceipt()
     if fptr.errorCode() > 0:
@@ -166,7 +181,7 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     #Все проверки пройдены, чек есть, запрашиваем параметры
     fptr.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_LAST_RECEIPT)
     fptr.fnQueryData()
-    if fptr.errorCode == 0:
+    if fptr.errorCode() == 0:
         resultDict = {'documentNumber' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_NUMBER),
         'receiptType' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE),
         'receiptSum' : fptr.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
@@ -379,8 +394,8 @@ def checkdm(fptr, DM_code):
     # processingResult = fptr.getParamInt(2005)
     # processingCode = fptr.getParamInt(2105)
     fptr.acceptMarkingCode()
-    # result = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
-    return(returnTextValidationResult(str(validationResult)))
+    result = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+    return(returnTextValidationResult(str(result)))
 
 #Инициализация ККТ 
 def initKKT(settings: dict[str, any]):

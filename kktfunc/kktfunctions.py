@@ -68,6 +68,8 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         goods (list): Список с товарами(словарь)
         cash (bool): Наличный, безналичный
     """    
+    
+    sumerrors = "" #Для сбора промежуточных ошибок
     fptr.setParam(1021, cashier['cashierName'])
     fptr.setParam(1203, cashier['INN'])
     fptr.operatorLogin()
@@ -78,6 +80,8 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     #Налогообложение
     fptr.setParam(1055, snoClass(sno=sno))
     fptr.openReceipt()
+    if fptr.errorCode() > 0:
+        sumerrors += f'\n {fptr.errorDescription()}'
     
     #Регистрация позиции с кодом маркировки сделать столько итераций сколько товаров
     #Соглашение, жду в словаре name - Имя товара, price - цена, quantity - количество
@@ -93,12 +97,22 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         else:
             #TODO По умолчанию 20%, надо проработать
             fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
-        fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, good['sum'])
-        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
-        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, ['markingcode'])
-        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
-        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
-        fptr.registration()
+        
+        fptr.setParam(1212, 1) #Признак предмета расчета
+        """30 о реализуемом подакцизном товаре, подлежащем маркировке средством идентификации, не имеющем кода маркировки
+            31 о реализуемом подакцизном товаре, подлежащем маркировке средством идентификации, имеющем код маркировки
+            32 о реализуемом товаре, подлежащем маркировке средством идентификации, не имеющем кода маркировки, за исключением подакцизного товара
+            33 о реализуемом товаре, подлежащем маркировке средством идентификации, имеющем код маркировки, за исключением подакцизного товара
+        """
+        #fptr.setParam(1214, 4) #Признак способа расчета
+        
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 200.02)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT_OTHER)
+        #fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
+        #fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+        #fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, 5)
+        #fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+        #fptr.registration()
     
     if cashelesssum > 0:
         fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)
@@ -112,32 +126,55 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     
     #TODO торопимся выбить чек, потом проработать налоги
     fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 200.00)
+    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 200.022)
     fptr.receiptTax()
+    if fptr.errorCode() > 0:
+        sumerrors += f'\n {fptr.errorDescription()}'
 
-    fptr.setParam(IFptr.LIBFPTR_PARAM_SUM, 1000.00)
-    fptr.receiptTotal()
+    #fptr.setParam(IFptr.LIBFPTR_PARAM_SUM, 1000.11)
+    #fptr.receiptTotal()
     #Закрытие полность оплаченного чека
     fptr.closeReceipt()
+    if fptr.errorCode() > 0:
+        sumerrors += f'\n {fptr.errorDescription()}'
     
     # Тут или после проверки? Очистка кодов из таблицы.
     fptr.clearMarkingCodeValidationResult()
     while fptr.checkDocumentClosed() < 0:
         # Не удалось проверить состояние документа. Вывести пользователю текст ошибки, попросить устранить неполадку и повторить запрос
-        print(fptr.errorDescription())
-        return None
+        errorDesc = fptr.errorDescription()
+        errorCode = fptr.errorCode()
+        fptr.close()
+        return f'Не удалось проверить состояние документа {errorDesc} код ошибки {errorCode}. Промежуточные ошибки {sumerrors}'
     
     if not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):
         # Документ не закрылся. Требуется его отменить (если это чек) и сформировать заново
         fptr.cancelReceipt()
-        return None
+        errorDesc = fptr.errorDescription()
+        errorCode = fptr.errorCode()
+        fptr.close()
+        return f'Не удалось закрыть документ {errorDesc} код ошибки {errorCode}. Промежуточные ошибки {sumerrors}'
 
     if not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_PRINTED):
     # Можно сразу вызвать метод допечатывания документа, он завершится с ошибкой, если это невозможно
         while fptr.continuePrint() < 0:
-            # Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.
-            print('Не удалось напечатать документ (Ошибка "%s"). Устраните неполадку и повторите.', fptr.errorDescription())
-            return None
+            # Если не удалось допечатать документ - показать пользователю ошибку и попробовать еще раз.            
+            errorDesc = fptr.errorDescription()
+            errorCode = fptr.errorCode()
+            fptr.close()
+            return f'Не удалось напечатать документ (Ошибка {errorDesc}). Устраните неполадку и повторите. Промежуточные ошибки {sumerrors}'
+    #Все проверки пройдены, чек есть, запрашиваем параметры
+    fptr.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_LAST_RECEIPT)
+    fptr.fnQueryData()
+    if fptr.errorCode == 0:
+        resultDict = {'documentNumber' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_NUMBER),
+        'receiptType' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE),
+        'receiptSum' : fptr.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
+        'fiscalSign' : fptr.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN),
+        'dateTime' : fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)}
+        return resultDict
+    else:
+        return f'Проблема запроса ФПД чека {fptr.errorDescription()}'
 
 
 def receipt_type(LIBFPTR_PARAM_RECEIPT_TYPE: IFptr.LIBFPTR_PARAM_RECEIPT_TYPE):
@@ -342,8 +379,8 @@ def initKKT(settings: dict[str, any]):
 
 # Установка кассира
 def setcashier(cashier: json, fptr: IFptr):
-    fptr.setParam(1021, "Кассир Иванов И.")
-    fptr.setParam(1203, "123456789047")
+    fptr.setParam(1021, "Соколов В.И.")
+    fptr.setParam(1203, "665811557830")
     fptr.operatorLogin()
     if fptr.errorCode() == 0:
         return returnDict(True, '', None)

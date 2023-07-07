@@ -47,7 +47,10 @@ def checkmark():
             if initedkkt.get('succes'):
                 driver = initedkkt.get('driver')
                 #TODO Функция не принимает сейчас сам код, только экземпляр драйвера, надо поправить
-                return json.dumps(kkt.checkdm(driver, markCode))
+                result = kkt.checkdm(driver, markCode)
+                driver.close()
+                return result
+
             else:
                 return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
         else:

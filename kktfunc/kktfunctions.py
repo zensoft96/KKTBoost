@@ -60,7 +60,7 @@ def tax(strtax:str):
     return taxes.get(strtax)
 
 def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
-            cashelesssum: float):
+            cashelesssum: float, taxsum:float):
     """Формирование чека состоит из следующих операций:
     открытие чека и передача реквизитов чека;
     регистрация позиций, печать нефискальных данных (текст, штрихкоды, изображения);
@@ -79,7 +79,9 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         electronnically (bool): Печатать чек электронно(не на бумаге)
         sno (int): Система налогообложения, 0 - Общая, 1 - УСН Доход, 2 - УСН Доход-Расход, 3 - ЕНВД, 4 - ЕСХН, 5 - Патент
         goods (list): Список с товарами(словарь)
-        cash (bool): Наличный, безналичный
+        cashsum (float): Сумма оплаты наличными
+        cashelesssum (float): Сумма оплаты безналичными
+        taxsum (float): Сумма налога чека
     """    
     # fptr.cancelMarkingCodeValidation()
     for good in goods:
@@ -148,9 +150,9 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         fptr.payment()
     else: return 'Нет сумм чека'
     
-    #TODO торопимся выбить чек, потом проработать налоги
-    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 2.00)
+    
+    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, goodtax)
+    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, taxsum)
     fptr.receiptTax()
     if fptr.errorCode() > 0:
         sumerrors += f'\n {fptr.errorDescription()}'

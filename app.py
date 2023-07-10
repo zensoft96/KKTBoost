@@ -197,6 +197,7 @@ def receipt():
             goods = request.json['goods']
             cashier = request.json['cashier']
             cashelesssum = request.json['cashelesssum']
+            taxsum = request.json['taxsum']
         except:
             return 'Не все параметры пришли'
         
@@ -205,7 +206,8 @@ def receipt():
                                     cashier={'cashierName': cashier[0]['cashierName'],
                                              'INN': cashier[0]['INN']},
                                     electronnically=electronnically,
-                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum)
+                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
+                                    taxsum=taxsum)
         return(receiptResult)        
     else:
         return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')

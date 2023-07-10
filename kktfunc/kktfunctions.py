@@ -46,6 +46,19 @@ def snoClass(sno):
             }
     return snoDict[sno]
 
+
+def tax(strtax:str):
+    taxes = {'NO':IFptr.LIBFPTR_TAX_NO,
+             '0': IFptr.LIBFPTR_TAX_VAT0,
+             '10': IFptr.LIBFPTR_TAX_VAT10,
+             '110': IFptr.LIBFPTR_TAX_VAT110,
+             '118': IFptr.LIBFPTR_TAX_VAT118,
+             '120': IFptr.LIBFPTR_TAX_VAT120,
+             'NO': IFptr.LIBFPTR_TAX_NO,
+             '18': IFptr.LIBFPTR_TAX_VAT18,
+             '20': IFptr.LIBFPTR_TAX_VAT20}
+    return taxes.get(strtax)
+
 def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
             cashelesssum: float):
     """Формирование чека состоит из следующих операций:
@@ -93,21 +106,17 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         fptr.setParam(IFptr.LIBFPTR_PARAM_COMMODITY_NAME, good['name'])
         fptr.setParam(IFptr.LIBFPTR_PARAM_PRICE, good['price'])
         fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, good['quantity'])
-        if good['tax'] == 20:
-            fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
-        elif good['tax'] == 0:
-            fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_NO)
-        else:
-            #TODO По умолчанию 20%, надо проработать
-            fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
-        
-        fptr.setParam(1212, 31) #Признак предмета расчета
+        goodtax = tax(good['tax'])
+        if goodtax is None:
+            return f'Не пришла налоговая ставка для {good["name"]}'
+        fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, goodtax)
+        fptr.setParam(1212, good['ppr']) #Признак предмета расчета
         """30 о реализуемом подакцизном товаре, подлежащем маркировке средством идентификации, не имеющем кода маркировки
             31 о реализуемом подакцизном товаре, подлежащем маркировке средством идентификации, имеющем код маркировки
             32 о реализуемом товаре, подлежащем маркировке средством идентификации, не имеющем кода маркировки, за исключением подакцизного товара
             33 о реализуемом товаре, подлежащем маркировке средством идентификации, имеющем код маркировки, за исключением подакцизного товара
         """
-        fptr.setParam(1214, 4) #Признак способа расчета
+        fptr.setParam(1214, good['psr']) #Признак способа расчета
         
         # fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 200.02)
         # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)

@@ -1,6 +1,10 @@
-**/__pycache__
 /env
 /.vscode
 settings.db
 zendb.db
 requirements.txt
+/kktfunc/__pycache__/cashier.cpython-311.pyc
+/kktfunc/__pycache__/kktfunctions.cpython-311.pyc
+/__pycache__/libfptr10.cpython-311.pyc
+sql/__pycache__/sqlfunc.cpython-311.pyc
+**/__pycache__

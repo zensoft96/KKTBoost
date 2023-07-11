@@ -197,6 +197,7 @@ def receipt():
             cashsum = float(request.json['cashsum'])
             goods = request.json['goods']
             cashier = request.json['cashier']
+            taxsum = request.json['taxsum']
             cashelesssum = float(request.json['cashelesssum'])
         except ValueError:
             error_value = str(traceback.format_exc())
@@ -212,7 +213,8 @@ def receipt():
                                     cashier={'cashierName': cashier[0]['cashierName'],
                                              'INN': cashier[0]['INN']},
                                     electronnically=electronnically,
-                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum)
+                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
+                                    taxsum=taxsum)
         return(receiptResult)        
     else:
         return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')

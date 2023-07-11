@@ -468,12 +468,13 @@ def getkktsettings():
     settingdict = {}
     if len(current_settings) > 0:
         for current_setting in current_settings:
-            CURRENT_SETTING = IFptr.__getattribute__(IFptr, current_setting.get('setting'))
-            if CURRENT_SETTING != 'ComFile':
-                CURRENT_SETTING_VALUE = IFptr.__getattribute__(IFptr, current_setting.get('settingvalue'))
-            else:
-                CURRENT_SETTING_VALUE = current_setting.get('settingvalue')
-            settingdict[CURRENT_SETTING] = CURRENT_SETTING_VALUE
+            if current_setting.get('setting') != 'cashier':
+                CURRENT_SETTING = IFptr.__getattribute__(IFptr, current_setting.get('setting'))
+                if CURRENT_SETTING != 'ComFile':
+                    CURRENT_SETTING_VALUE = IFptr.__getattribute__(IFptr, current_setting.get('settingvalue'))
+                else:
+                    CURRENT_SETTING_VALUE = current_setting.get('settingvalue')
+                settingdict[CURRENT_SETTING] = CURRENT_SETTING_VALUE
         return settingdict
     else:
         default_settings = {

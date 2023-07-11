@@ -187,16 +187,23 @@ def closeShift():
         
 @app.route("/receipt", methods=['POST'])
 def receipt():
+    import traceback
     initedkkt = kkt.initKKT(None)
     if initedkkt.get('succes'):
         try:
             checkType = request.json['checkType']
             electronnically = request.json['electronnically']
-            sno = request.json['sno']
-            cashsum = request.json['cashsum']
+            sno = int(request.json['sno'])
+            cashsum = float(request.json['cashsum'])
             goods = request.json['goods']
             cashier = request.json['cashier']
-            cashelesssum = request.json['cashelesssum']
+            cashelesssum = float(request.json['cashelesssum'])
+        except ValueError:
+            error_value = str(traceback.format_exc())
+            split_error = error_value.split('\n')
+            where_str = split_error[2].split('[\'')[1].replace('\'])', '')
+            what_str = split_error[4]
+            return f'В параметре {where_str} пришли неверные данные. Ошибка: {what_str} '
         except:
             return 'Не все параметры пришли'
         

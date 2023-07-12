@@ -60,7 +60,7 @@ def tax(strtax:str):
     return taxes.get(strtax)
 
 def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
-            cashelesssum: float, taxsum:float):
+            cashelesssum: float, taxsum:float, corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0'):
     """Формирование чека состоит из следующих операций:
     открытие чека и передача реквизитов чека;
     регистрация позиций, печать нефискальных данных (текст, штрихкоды, изображения);
@@ -82,6 +82,11 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         cashsum (float): Сумма оплаты наличными
         cashelesssum (float): Сумма оплаты безналичными
         taxsum (float): Сумма налога чека
+        Если чек коррекции: 
+        corrType (int): Тип коррекции (0 - самостоятельно, 1 - по предписанию)
+        corrBaseDate (str): Дата совершения корректируемого расчета	в формате yyyy.mm.dd
+        corrBaseNum (str): Номер предписания налогового органа
+
     """    
     # fptr.cancelMarkingCodeValidation()
     for good in goods:
@@ -97,6 +102,17 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, electronnically)
     #Налогообложение
     fptr.setParam(1055, snoClass(sno=sno))
+
+    if checkType.upper().find('CORR'):
+        fptr.setParam(1178, corrBaseDate)
+        fptr.setParam(1179, corrBaseNum)
+        fptr.utilFormTlv() #формируется основание для коррекции на основании реквизитов 1178 и 1179
+        correctionInfo = fptr.getParamByteArray(IFptr.LIBFPTR_PARAM_TAG_VALUE)
+
+        fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL_CORRECTION)
+        fptr.setParam(1173, corrType)
+        fptr.setParam(1174, correctionInfo)
+
     fptr.openReceipt()
     if fptr.errorCode() > 0:
         sumerrors += f'\n {fptr.errorDescription()}'
@@ -468,13 +484,15 @@ def getkktsettings():
     settingdict = {}
     if len(current_settings) > 0:
         for current_setting in current_settings:
-            if current_setting.get('setting') != 'cashier':
+            try:
                 CURRENT_SETTING = IFptr.__getattribute__(IFptr, current_setting.get('setting'))
-                if CURRENT_SETTING != 'ComFile':
-                    CURRENT_SETTING_VALUE = IFptr.__getattribute__(IFptr, current_setting.get('settingvalue'))
-                else:
-                    CURRENT_SETTING_VALUE = current_setting.get('settingvalue')
-                settingdict[CURRENT_SETTING] = CURRENT_SETTING_VALUE
+            except:
+                CURRENT_SETTING = current_setting.get('setting')
+            if CURRENT_SETTING != 'ComFile' and CURRENT_SETTING != 'cashier':
+                CURRENT_SETTING_VALUE = IFptr.__getattribute__(IFptr, current_setting.get('settingvalue'))
+            else:
+                CURRENT_SETTING_VALUE = current_setting.get('settingvalue')
+            settingdict[CURRENT_SETTING] = CURRENT_SETTING_VALUE
         return settingdict
     else:
         default_settings = {

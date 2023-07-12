@@ -90,6 +90,7 @@ def settings():
             #Ждем обработки очереди
             sleep(5)
         current_settings = Settings.select().dicts()
+        cashier = ''
         if len(current_settings) > 0:
             for current_setting in current_settings:
                 if current_setting.get('setting') == 'LIBFPTR_SETTING_MODEL':
@@ -100,13 +101,34 @@ def settings():
                     LIBFPTR_SETTING_COM_FILE = current_setting['settingvalue']
                 elif current_setting.get('setting') == 'LIBFPTR_SETTING_BAUDRATE':
                     LIBFPTR_SETTING_BAUDRATE = current_setting['settingvalue']
+                elif current_setting.get('setting') == 'cashier':
+                    cashier = current_setting['settingvalue']        
                 else:
                     print('Настройка которой не ждали')
                 
             return render_template('settings.html', disabled = 'disabled', model=LIBFPTR_SETTING_MODEL,
-                                   port = LIBFPTR_SETTING_PORT, com = LIBFPTR_SETTING_COM_FILE, baud = LIBFPTR_SETTING_BAUDRATE)
+                                   port = LIBFPTR_SETTING_PORT, com = LIBFPTR_SETTING_COM_FILE, 
+                                   baud = LIBFPTR_SETTING_BAUDRATE, cashier = cashier)
         else:
             return render_template('settings.html', disabled = 'disabled')
+    else:
+        return True
+    
+@app.route("/saveCashier", methods=['POST','GET'])
+def saveCashier():   
+    settingsdict = {}
+    if request.method == 'POST':
+        for i in request.form:
+            current_settings = Settings.get_or_none(Settings.setting == i)
+            if type(current_settings) == type(None):
+                current_settings = Settings(setting = i, settingvalue = request.form[i])
+                current_settings.save()
+            else:
+                current_settings.setting = i
+                current_settings.settingvalue = request.form[i]
+                current_settings.save()
+            settingsdict[current_settings.setting] = current_settings.settingvalue
+        return render_template('settings.html', cashier=settingsdict.get('cashier'))
     else:
         return True
 
@@ -225,8 +247,12 @@ def receipt():
             cashsum = float(request.json['cashsum'])
             goods = request.json['goods']
             cashier = request.json['cashier']
-            taxsum = request.json['taxsum']
+            taxsum = float(request.json['taxsum'])
             cashelesssum = float(request.json['cashelesssum'])
+            if checkType.upper().find('CORR') != -1:
+                corrType = request.json["correctionType"]
+                corrBaseDate = request.json["correctionBaseDate"]
+                corrBaseNum = request.json["correctionBaseNumber"]
         except ValueError:
             error_value = str(traceback.format_exc())
             split_error = error_value.split('\n')
@@ -239,9 +265,17 @@ def receipt():
             return ('ККТ в работе. Повторите попытку позже.')
         jobs.appendleft({'jobname':'receipt'})
         driver = initedkkt.get('driver')
-        receiptResult = kkt.receipt(fptr=driver, checkType=checkType, 
+        if checkType.upper().find('CORR') != -1:
+            receiptResult = kkt.receipt(fptr=driver, checkType=checkType, 
                                     cashier={'cashierName': cashier[0]['cashierName'],
-                                             'INN': cashier[0]['INN']},
+                                            'INN': cashier[0]['INN']},
+                                    electronnically=electronnically, sno=sno, cashsum=cashsum, 
+                                    goods=goods,cashelesssum=cashelesssum, taxsum=taxsum, 
+                                    corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum)
+        else:
+            receiptResult = kkt.receipt(fptr=driver, checkType=checkType, 
+                                    cashier={'cashierName': cashier[0]['cashierName'],
+                                            'INN': cashier[0]['INN']},
                                     electronnically=electronnically,
                                     sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
                                     taxsum=taxsum)

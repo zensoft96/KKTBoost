@@ -107,7 +107,7 @@
     
 
 </form>
-<form class='settings_form row1' action="/settings" method="post">
+<form class='settings_form row1' action="/saveCashier" method="post">
     <div class='row_setting'>
         <b><label for="cashier">Кассир</label></b>
         {% if cashier %}
@@ -115,7 +115,7 @@
         {% endif %}
         <p class='settings_select'><input class='select_list row1' {% if cashier_name %}value={% endif %}{{ cashier }} type="text" size="25" id='cashier' name='cashier' placeholder="Введите кассира" required></p>
         <div class='row2'>
-        <p class='button_center'><input type="submit" value="Сохранить данные" class='btn_settings' formmethod='post' formaction='/settings'></p>
+        <p class='button_center'><input type="submit" value="Сохранить данные" class='btn_settings' formmethod='post' formaction='/saveCashier'></p>
         </div>
         
     </div>

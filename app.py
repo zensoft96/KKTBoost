@@ -224,7 +224,7 @@ def receipt():
             if checkType.upper().find('CORR') != -1:
                 corrType = request.json["correctionType"]
                 corrBaseDate = request.json["correctionBaseDate"]
-                corrBaseNum = request.json["correctionBaseNumber"]
+                # corrBaseNum = request.json["correctionBaseNumber"]
         except ValueError:
             error_value = str(traceback.format_exc())
             split_error = error_value.split('\n')
@@ -241,7 +241,7 @@ def receipt():
                                             'INN': cashier[0]['INN']},
                                     electronnically=electronnically, sno=sno, cashsum=cashsum, 
                                     goods=goods,cashelesssum=cashelesssum, taxsum=taxsum, 
-                                    corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum)
+                                    corrType = corrType, corrBaseDate = corrBaseDate)
         else:
             receiptResult = kkt.receipt(fptr=driver, checkType=checkType, 
                                     cashier={'cashierName': cashier[0]['cashierName'],

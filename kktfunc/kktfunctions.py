@@ -6,6 +6,7 @@ from itsdangerous import base64_decode
 from libfptr10 import IFptr
 from sql.sqlfunc import *
 from time import time
+from datetime import datetime
 
 def returnDict(success: bool, errorDesc: str, fptr: IFptr):
     """Возвращает словарь с параметрами выполнения функции
@@ -97,23 +98,29 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     fptr.setParam(1203, cashier['INN'])
     fptr.operatorLogin()
     
-    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, checkTypeClass(checkType=checkType))
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, checkTypeClass(checkType=checkType))
     #Печатать электронный чек
     fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, electronnically)
     #Налогообложение
     fptr.setParam(1055, snoClass(sno=sno))
 
-    if checkType.upper().find('CORR'):
-        fptr.setParam(1178, corrBaseDate)
-        fptr.setParam(1179, corrBaseNum)
+    if checkType.upper().find('CORR') != -1:
+        # fptr.setParam(1178, datetime.datetime(int(corrBaseDate[6:]), int(corrBaseDate[3:5]), int(corrBaseDate[:2])))
+        
+        fptr.setParam(1178, datetime(2023,7,12,0,0,0))
+        fptr.setParam(1177, "Служебная записка")
+        fptr.setParam(1179, "0")
+       
         fptr.utilFormTlv() #формируется основание для коррекции на основании реквизитов 1178 и 1179
         correctionInfo = fptr.getParamByteArray(IFptr.LIBFPTR_PARAM_TAG_VALUE)
 
         fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL_CORRECTION)
+    # if checkType.upper().find('CORR') != -1:
+        
         fptr.setParam(1173, corrType)
         fptr.setParam(1174, correctionInfo)
 
-    fptr.openReceipt()
+    fptr.openReceipt() 
     if fptr.errorCode() > 0:
         sumerrors += f'\n {fptr.errorDescription()}'
     

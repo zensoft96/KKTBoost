@@ -1,4 +1,4 @@
-from ast import If
+from ast import Dict
 import json
 from logging import raiseExceptions
 from itsdangerous import base64_decode
@@ -6,6 +6,176 @@ from itsdangerous import base64_decode
 from libfptr10 import IFptr
 from sql.sqlfunc import *
 from time import time
+
+class Kassa():
+    
+    __busy = False
+        
+    def __init__(self) -> None:
+        self.settings = getkktsettings()
+            
+    def __del__(self):
+        print('Закрытие ресурса')
+
+    def close(self):
+        Kassa().__unsetBusy()
+        self.driver.close()
+
+    # Установка кассира
+    def setcashier(self, cashier: json):
+        self.driver.setParam(1021, "Соколов В.И.")
+        self.driver.setParam(1203, "665811557830")
+        self.driver.operatorLogin()
+        if self.driver.errorCode() == 0:
+            return self.creturnDict(True, {}, None)
+        else:    
+            #TODO Подумать сильно на счет возвратов через Raise Exeption
+            return returnDict(False, self.driver.errorDescription(), None)
+
+        #Открытие смены
+    def openShift(self, cashier: json):
+        if cashier:
+            setcashier(cashier, self.driver)
+        else: #TODO кассир не пришел, надо взять из БД
+            setcashier(cashier, self.driver)
+        #fptr = initKKT(None)
+        #if fptr.isinstance(IFptr):
+        self.driver.openShift()
+        if self.driver.errorCode() == 0:
+            return self.creturnDict(True,{},None)
+        else:
+            return returnDict(False, self.driver.errorDescription(), None)
+        
+    #Закрытие смены
+    def closeShift(self, cashier: json):
+        if cashier:
+            setcashier(cashier, self.driver)
+        else: #TODO кассир не пришел, надо взять из БД
+            setcashier(cashier, self.driver)
+        #fptr = initKKT(None)
+        #if fptr.isinstance(IFptr):
+        if self.driver.isOpened():
+            self.driver.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
+            self.driver.report()
+            if self.driver.errorCode() == 0:
+                return returnDict(True, '', None)
+            else:
+                return returnDict(False, self.driver.errorDescription(), None)
+        else:
+            return returnDict(False, self.driver.errorDescription())
+    
+    def returnTextValidationResult (self, result):
+        text_results = {
+            '0' : "Проверка КП КМ не выполнена, статус товара ОИСМ не проверен [М]",
+            '1' : "Проверка КП КМ выполнена в ФН с отрицательным результатом, статус товара ОИСМ не проверен [М-]",
+            '3' : "Проверка КП КМ выполнена с положительным результатом, статус товара ОИСМ не проверен [М]",
+            '16' : "Проверка КП КМ не выполнена, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М]",
+            '17' : "Проверка КП КМ выполнена в ФН с отрицательным результатом, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М-]",
+            '19' : "Проверка КП КМ выполнена в ФН с положительным результатом, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М]",
+            '5' : "Проверка КП КМ выполнена с отрицательным результатом, статус товара у ОИСМ некорректен [М-]",
+            '7' : "Проверка КП КМ выполнена с положительным результатом, статус товара у ОИСМ некорректен [М-]",
+            '15' : "Проверка КП КМ выполнена с положительным результатом, статус товара у ОИСМ корректен [М+]"
+
+        }
+        try:
+            result = text_results[result]
+            return result
+        except:
+            return 'Не получен статус проверки'
+    
+    #Проверка кода маркировки
+    def checkdm(self, DM_code):
+        start_time = time()
+        self.driver.cancelMarkingCodeValidation()
+
+        self.driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, '014494550435306821QXYXSALGLMYQQ\u001D91EE06\u001D92YWCXbmK6SN8vvwoxZFk7WAY9WoJNMGGr6Cgtiuja04c=')
+        self.driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, DM_code)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, 'ЗАЛУПА')
+        self.driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, 1.000)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
+        self.driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_FRACTIONAL_QUANTITY, '1/2')
+        self.driver.beginMarkingCodeValidation()
+
+        while True:
+            current_time = time()
+            self.driver.getMarkingCodeValidationStatus()
+            if self.driver.getParamBool(IFptr.LIBFPTR_PARAM_MARKING_CODE_VALIDATION_READY):
+                break
+            if int(current_time - start_time) >= 30:
+                break
+        validationResult = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+        # isRequestSent = fptr.getParamBool(IFptr.LIBFPTR_PARAM_IS_REQUEST_SENT)
+        # error = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR)
+        # errorDescription = fptr.getParamString(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR_DESCRIPTION)
+        # info = fptr.getParamInt(2109)
+        # processingResult = fptr.getParamInt(2005)
+        # processingCode = fptr.getParamInt(2105)
+        self.driver.acceptMarkingCode()
+        result = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+        return(returnTextValidationResult(str(result)))
+        
+        
+    def creturnDict(self, success=False, parameters={}, errordesc=None):
+        """Возврат словаря
+        
+        Args:
+            success (bool): Успех выполнения
+            parameters (Dict): Словарь параметров выполнения
+            errordesc (str): Описание ошибки . Defaults to None.
+
+        Returns:
+            Dict: Словарь с передаваемыми значениями
+        """        
+        retDict = {'success':success,
+                   'errordesc': lambda x: errordesc if errordesc is not None else '',
+                   'parameters':parameters}
+        return retDict
+    
+    def __str__(self):
+        return f'ДрайверККТ инициализирован: {self.driver.isOpened()}'
+        
+    def __enter__(self):
+        if not Kassa().__busy:
+            fptr = IFptr("")
+            fptr.setSettings(self.settings)
+            fptr.open()
+            if fptr.isOpened():
+                #Удачно соединились, драйвер есть
+                Kassa().__setBusy()
+                self.driver = fptr
+                return self
+            else:
+                #Неудачно соединились, вернуть exit
+                raise Exception(f'Проблема инициализации драйвера {fptr.errorDesc()}')
+        else:
+            raise Exception(f'Класс касса в статусе busy')
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        #Убираем флаг занято
+        Kassa().__unsetBusy()
+        #Выключаем работу с драйвером
+        self.driver.close()
+        #Возвращаем ответ
+        if exc_type is not None:
+            return self.creturnDict(False, f'Зафиксировано исключение {exc_value}, тип исключения {exc_type}')
+        else:
+            return self.creturnDict(success=True)
+        
+        
+    def settings():
+        pass
+    
+    @classmethod
+    def __setBusy(cls):
+        cls.__busy = True
+    
+    @classmethod
+    def __unsetBusy(cls):
+        cls.__busy = False
+        
 
 def returnDict(success: bool, errorDesc: str, fptr: IFptr):
     """Возвращает словарь с параметрами выполнения функции

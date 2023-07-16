@@ -1,14 +1,114 @@
 from time import sleep
+from typing import Deque
 from flask import Flask, flash, redirect, request, render_template
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
 from libfptr10 import IFptr
-import json
+import json, uuid
 from kktfunc.cashier import Cashier #Кассира из json в объект
 from collections import deque
+from threading import Thread
+import jobs.jobsfunctions as jf
 
 app = Flask(__name__)
-jobs = deque([])
+jobs = deque([], maxlen=50)
+#Для теста задач, потом удалить нахуй
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229CgQXbjYAAAA2X9F'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229eqX4A3kAAAA0tKf'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229A4K4mtFAAAAhv8Z'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229\';r2lV"AAAAX3Id'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229ZGI+v3\'AAAAVYr8'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229r9GcX%nAAAAbIHi'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229KXAQhhFAAAAjt0m'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229!ZNntFnAAAAs++F'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229YeLyE/CAAAAG1UU'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229LEEMJiiAAAAs+ds'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229C4S*skFAAAATeNR'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'046037311752292msEGEpAAAAYng0'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229,LFRB2:AAAA5/L+'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229REr2!>SAAAA+TVy'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229uGTEsgbAAAA0BEu'
+# }})
+
+def jobs_in_thread(queuejobs: Deque):
+    """Для выполнения в потоке
+    Args:
+        queuejobs (Deque): Очередь задач
+    """    
+    while True:
+        if len(queuejobs) > 0:
+            # Возьмем первый элемент, попробуем обработать и поставим в конец
+            firstjob = queuejobs.popleft()
+            jobname = firstjob.get('jobname')
+            jobparameters = firstjob.get('parameters')
+            jobid = firstjob.get('id')
+            nowjob = jf.Job(jobname=jobname, jobid=jobid, jobparameters=jobparameters)
+            result = nowjob.completeTask()
+            if not result:
+                queuejobs.append(nowjob.task_to_dict)
+            else:
+                resultjob = Doned_jobs.insert(job_id=jobid, result_text='', recieved=False)
+                resultjob.execute()
+                
 
 def returnedjson(success=True, descr=''):
     return json.dumps({'success': success,
@@ -22,6 +122,24 @@ def hello():
         return render_template('index.html')
     else:
         return True
+
+@app.route('/jobresult/<job_id>', methods=['GET'])
+def getjob(job_id:str):
+    currentJob = Doned_jobs.get_or_none(Doned_jobs.job_id == job_id)
+    if currentJob is None:
+        return json.dumps({
+            'result': False,
+            'error':'Нет задачи с UID {job_id}'
+            }, ensure_ascii=False)
+    else:
+        currentJob.recieved = True
+        currentJob.save()
+        return json.dumps({
+                           'result': True,
+                           'error': '',
+                           'parameters': currentJob.result_text
+                           },ensure_ascii=False)
+        
 
 @app.route("/props", methods=['POST', 'GET'])
 def props():
@@ -44,6 +162,7 @@ def props():
 
 #Проверка кода маркировки json
 @app.route("/checkmark", methods=['POST'])
+#FIXME Надо переписать на работу через With с кассой смотри пример test.py
 def checkmark():
     if request.content_type == 'application/json':
         markCode = request.json.get('code')
@@ -52,13 +171,16 @@ def checkmark():
             return('ККТ в работе. Повторите попытку позже.')
         else:
             if markCode is not None:
-                jobs.appendleft({'jobname':'checkmark'})
+                jobs.appendleft({'jobname':'checkmark', 
+                                 'jobid':uuid.uuid4, 'parameters':{
+                                 'markCode': markCode}
+                                 })
                 initedkkt = kkt.initKKT(None)
                 if initedkkt.get('succes'):
                     driver = initedkkt.get('driver')
                     result = kkt.checkdm(driver, markCode)
                     driver.close()
-                    jobs.pop()
+                    jobs.popleft()
                     return result
                 else:
                     return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
@@ -305,6 +427,11 @@ def statusShift():
 if __name__ == "__main__":
     sqlsettings = Settings()
     sqlsettings.create_table(safe=True)
+    sql_doned_jobs = Doned_jobs()
+    sql_doned_jobs.create_table(safe=True)
+    jobthread = Thread(target=jobs_in_thread, args=(jobs,))
+    jobthread.start()
+    jobthread.join()
     app.secret_key = 'hjaskjdhkjasdhjahdkhakjdhqwkhJHHKHY*(Y*Y*(*Y))'
     app.run(debug=False, port=5000, host="0.0.0.0")
     

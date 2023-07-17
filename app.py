@@ -95,16 +95,17 @@ def jobs_in_thread(queuejobs: Deque):
     while True:
         if len(queuejobs) > 0:
             # Возьмем первый элемент, попробуем обработать и поставим в конец
+            print('Есть задача')
             firstjob = queuejobs.popleft()
             jobname = firstjob.get('jobname')
             jobparameters = firstjob.get('parameters')
-            jobid = firstjob.get('id')
+            jobid = firstjob.get('jobid')
             nowjob = jf.Job(jobname=jobname, jobid=jobid, jobparameters=jobparameters)
             result = nowjob.completeTask()
             if not result:
-                queuejobs.append(nowjob.task_to_dict)
+                queuejobs.append(nowjob.task_to_dict())
             else:
-                resultjob = Doned_jobs.insert(job_id=jobid, result_text='', recieved=False)
+                resultjob = Doned_jobs.insert(jobid=jobid, resulttext=result, recieved=False)
                 resultjob.execute()
                 
 
@@ -158,23 +159,27 @@ def props():
     else:
         return 'Error method'
 
+@app.errorhandler(500)
+def internal_server_error(e):
+    return str(e.original_exception)
+
+
 #Проверка кода маркировки json
-#FIXME Отсюда дичь, пока не исправишь передавать нельзя
 @app.route("/checkmark", methods=['POST'])
 def checkmark():
     if request.content_type == 'application/json':
         markCode = request.json.get('code')
-        if markCode is not None:
-            with kkt.Kassa() as kassa:
-                try:                    
-                    markresult = kassa.checkdm(markCode)
-                    return markresult
-                except Exception as ErrMessage:
-                    jobid = uuid.uuid4
+        try:
+            if markCode is not None:
+                with kkt.Kassa() as kassa:
+                        markresult = kassa.checkdm(markCode)
+                        return markresult
+            else:
+                return 'Ждем кода маркировки для проверки'
+        except Exception as ErrMessage:
+                    jobid = str(uuid.uuid4())
                     jobs.append({'jobname':'checkmark', 'jobid': jobid, 'parameters':{'markCode':markCode}})
                     return f'Ошибка при выполнении запроса {ErrMessage}. Номер задачи в очереди {jobid}'
-        else:
-            return 'Ждем кода маркировки для проверки'
         # if jobs.count(jobs) > 0:
         #     return('ККТ в работе. Повторите попытку позже.')
         # else:
@@ -216,7 +221,7 @@ def settings():
                                    com = settingsdict.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settingsdict.get('LIBFPTR_SETTING_BAUDRATE'))
     elif request.method == 'GET':
-        while jobs.count(jobs) > 0:
+        while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
         current_settings = Settings.select().dicts()
@@ -277,7 +282,7 @@ def checkstatus():
 @app.route("/openShift", methods=['POST'])
 def openShift():
     if request.content_type == 'application/x-www-form-urlencoded':
-        while jobs.count(jobs) > 0:
+        while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
         initedkkt = kkt.initKKT(None)
@@ -294,7 +299,7 @@ def openShift():
                 flash(errorstring)
                 return render_template('index.html')
     else:
-        if jobs.count(jobs) > 0:
+        if len(jobs) > 0:
             return('ККТ в работе. Повторите попытку позже.')
         else:
             jobs.appendleft({'jobname':'openshift'})
@@ -316,7 +321,7 @@ def openShift():
 @app.route("/closeShift", methods=['POST'])
 def closeShift():
     if request.content_type == 'application/x-www-form-urlencoded':
-        while jobs.count(jobs) > 0:
+        while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
         initedkkt = kkt.initKKT(None)
@@ -340,7 +345,7 @@ def closeShift():
             flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
             return render_template('index.html')
     else:
-        if jobs.count(jobs) > 0:
+        if len(jobs) > 0:
             return('ККТ в работе. Повторите попытку позже.')
         else:
             jobs.appendleft({'jobname':'closeshift'})
@@ -391,7 +396,7 @@ def receipt():
             return f'В параметре {where_str} пришли неверные данные. Ошибка: {what_str} '
         except:
             return 'Не все параметры пришли'
-        if jobs.count(jobs) > 0:
+        if len(jobs) > 0:
             return ('ККТ в работе. Повторите попытку позже.')
         jobs.appendleft({'jobname':'receipt'})
         driver = initedkkt.get('driver')
@@ -416,7 +421,7 @@ def receipt():
 
 @app.route("/statusShift", methods=['POST'])
 def statusShift():
-    while jobs.count(jobs) > 0:
+    while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
     jobs.appendleft({'jobname':'statusshift'})

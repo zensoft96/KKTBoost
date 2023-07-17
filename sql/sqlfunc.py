@@ -19,8 +19,8 @@ class FiskalOrders(Model):
         db_table = 'fiskal_orders'
 
 class Doned_jobs(Model):
-    job_id = UUIDField(unique=True, help_text='Имя задачи', db_column='jobid')
-    result_text = TextField(unique=False, help_text='Результат', db_column='result')
+    jobid = UUIDField(unique=True, help_text='Имя задачи', db_column='jobid')
+    resulttext = TextField(unique=False, help_text='Результат', db_column='result')
     recieved = BooleanField(unique=False, help_text='Получено в 1С',db_column='recieved')
     
     class Meta:

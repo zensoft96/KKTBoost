@@ -60,7 +60,8 @@ def tax(strtax:str):
     return taxes.get(strtax)
 
 def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
-            cashelesssum: float, taxsum:float, corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0'):
+            cashelesssum: float, #taxsum:float, 
+            corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0'):
     """Формирование чека состоит из следующих операций:
     открытие чека и передача реквизитов чека;
     регистрация позиций, печать нефискальных данных (текст, штрихкоды, изображения);
@@ -103,7 +104,7 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     #Налогообложение
     fptr.setParam(1055, snoClass(sno=sno))
 
-    if checkType.upper().find('CORR'):
+    if checkType.upper().find('CORR') != -1:
         fptr.setParam(1178, corrBaseDate)
         fptr.setParam(1179, corrBaseNum)
         fptr.utilFormTlv() #формируется основание для коррекции на основании реквизитов 1178 и 1179
@@ -168,7 +169,7 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     
     
     fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, goodtax)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, taxsum)
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, taxsum)
     fptr.receiptTax()
     if fptr.errorCode() > 0:
         sumerrors += f'\n {fptr.errorDescription()}'
@@ -213,7 +214,9 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         'receiptType' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE),
         'receiptSum' : fptr.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
         'fiscalSign' : fptr.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN),
-        'dateTime' : fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)}
+        'dateTime' : fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME),
+        'shiftNumber': fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER),
+        'receiptNumber': fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)}
         return resultDict
     else:
         return f'Проблема запроса ФПД чека {fptr.errorDescription()}'

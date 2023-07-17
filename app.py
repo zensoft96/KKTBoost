@@ -219,7 +219,7 @@ def receipt():
             cashsum = float(request.json['cashsum'])
             goods = request.json['goods']
             cashier = request.json['cashier']
-            taxsum = float(request.json['taxsum'])
+            # taxsum = float(request.json['taxsum'])
             cashelesssum = float(request.json['cashelesssum'])
             if checkType.upper().find('CORR') != -1:
                 corrType = request.json["correctionType"]
@@ -240,15 +240,15 @@ def receipt():
                                     cashier={'cashierName': cashier[0]['cashierName'],
                                             'INN': cashier[0]['INN']},
                                     electronnically=electronnically, sno=sno, cashsum=cashsum, 
-                                    goods=goods,cashelesssum=cashelesssum, taxsum=taxsum, 
+                                    goods=goods,cashelesssum=cashelesssum, #taxsum=taxsum, 
                                     corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum)
         else:
             receiptResult = kkt.receipt(fptr=driver, checkType=checkType, 
                                     cashier={'cashierName': cashier[0]['cashierName'],
                                             'INN': cashier[0]['INN']},
                                     electronnically=electronnically,
-                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
-                                    taxsum=taxsum)
+                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum)
+                                    # taxsum=taxsum)
         return(receiptResult)        
     else:
         return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')

@@ -8,3 +8,4 @@ requirements.txt
 /__pycache__/libfptr10.cpython-311.pyc
 sql/__pycache__/sqlfunc.cpython-311.pyc
 **/__pycache__
+sql/__pycache__/sqlfunc.cpython-311.pyc

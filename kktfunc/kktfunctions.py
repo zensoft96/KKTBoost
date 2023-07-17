@@ -1,68 +1,69 @@
-from ast import Dict
+
 import json
-from logging import raiseExceptions
-from itsdangerous import base64_decode
-#from kktfunc.initkkt import initkkt
+from sys import exception
+from app import settings
 from libfptr10 import IFptr
 from sql.sqlfunc import *
 from time import time
+
 
 class Kassa():
     
     __busy = False
         
     def __init__(self) -> None:
-        self.settings = getkktsettings()
+        self.settings = self.getkktsettings()
             
-    def __del__(self):
-        print('Закрытие ресурса')
+    # def __del__(self):
+    #     print('Закрытие ресурса')
 
+    #Получить настройки ККТ
+    def getkktsettings(self):
+        current_settings = Settings.select().dicts()
+        settingdict = {}
+        if len(current_settings) > 0:
+            for current_setting in current_settings:
+                try:
+                    CURRENT_SETTING = IFptr.__getattribute__(IFptr, current_setting.get('setting'))
+                except:
+                    CURRENT_SETTING = current_setting.get('setting')
+                if CURRENT_SETTING != 'ComFile' and CURRENT_SETTING != 'cashier':
+                    CURRENT_SETTING_VALUE = IFptr.__getattribute__(IFptr, current_setting.get('settingvalue'))
+                else:
+                    CURRENT_SETTING_VALUE = current_setting.get('settingvalue')
+                settingdict[CURRENT_SETTING] = CURRENT_SETTING_VALUE
+            return settingdict
+        else:
+            raise exception(f'Нет настроек ККТ в базе, зайдите в web и выполните начальную настройку кассы')
+        
+        
     def close(self):
         Kassa().__unsetBusy()
         self.driver.close()
-
-    # Установка кассира
-    def setcashier(self, cashier: json):
-        self.driver.setParam(1021, "Соколов В.И.")
-        self.driver.setParam(1203, "665811557830")
-        self.driver.operatorLogin()
-        if self.driver.errorCode() == 0:
-            return self.creturnDict(True, {}, None)
-        else:    
-            #TODO Подумать сильно на счет возвратов через Raise Exeption
-            return returnDict(False, self.driver.errorDescription(), None)
-
-        #Открытие смены
+        
+        
+    #Открытие смены
     def openShift(self, cashier: json):
-        if cashier:
-            setcashier(cashier, self.driver)
-        else: #TODO кассир не пришел, надо взять из БД
-            setcashier(cashier, self.driver)
-        #fptr = initKKT(None)
-        #if fptr.isinstance(IFptr):
+        self.setcashier(cashier)
         self.driver.openShift()
         if self.driver.errorCode() == 0:
             return self.creturnDict(True,{},None)
         else:
-            return returnDict(False, self.driver.errorDescription(), None)
+            raise exception(f'Ошибка при открытии смены {self.driver.errorDescription()}')
+            
         
     #Закрытие смены
     def closeShift(self, cashier: json):
-        if cashier:
-            setcashier(cashier, self.driver)
-        else: #TODO кассир не пришел, надо взять из БД
-            setcashier(cashier, self.driver)
-        #fptr = initKKT(None)
-        #if fptr.isinstance(IFptr):
+        self.setcashier(cashier)
         if self.driver.isOpened():
             self.driver.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
             self.driver.report()
             if self.driver.errorCode() == 0:
                 return returnDict(True, '', None)
             else:
-                return returnDict(False, self.driver.errorDescription(), None)
+                raise exception(f'Ошибка при закрытии {self.driver.errorDescription()}')
         else:
-            return returnDict(False, self.driver.errorDescription())
+            raise exception(f'Ошибка при закрытии {self.driver.errorDescription()}')
     
     def returnTextValidationResult (self, result):
         text_results = {
@@ -118,6 +119,29 @@ class Kassa():
         return(returnTextValidationResult(str(result)))
         
         
+     # Установка кассира
+    def setcashier(self, cashier: json):
+        if cashier is None:
+            sqlsettings = Settings()
+            cashierName = sqlsettings.get_or_none(sqlsettings.setting == 'cashier')
+            if cashierName is not None:
+                self.driver.setParam(1021, cashierName)
+            else:
+                raise exception(f'Касир не получен в запросе, кассир по умолчанию не установлен')            
+        else:
+            self.driver.setParam(1021, cashier.get("cashierName"))
+            #self.driver.setParam(1203, "665811557830")
+            self.driver.operatorLogin()
+            if self.driver.errorCode() == 0:
+                return returnDict(True, '', None)
+            else:    
+                raise exception(f'Проблема при установке кассира {self.driver.errorDescription()}')
+                # return returnDict(False, fptr.errorDescription(), None)
+        
+    def settings():
+        pass
+    
+    
     def creturnDict(self, success=False, parameters={}, errordesc=None):
         """Возврат словаря
         
@@ -149,7 +173,7 @@ class Kassa():
                 return self
             else:
                 #Неудачно соединились, вернуть exit
-                raise Exception(f'Проблема инициализации драйвера {fptr.errorDesc()}')
+                raise Exception(f'Проблема инициализации драйвера возможно ККТ выключена')
         else:
             raise Exception(f'Класс касса в статусе busy')
     
@@ -165,9 +189,6 @@ class Kassa():
             return self.creturnDict(success=True)
         
         
-    def settings():
-        pass
-    
     @classmethod
     def __setBusy(cls):
         cls.__busy = True
@@ -620,7 +641,7 @@ def setcashier(cashier: json, fptr: IFptr):
 def openShift(cashier: json, fptr: IFptr):
     if cashier:
         setcashier(cashier, fptr)
-    else: #TODO кассир не пришел, надо взять из БД
+    else: #TODO кассир не пришел, надо взять из БД, Реализовано в классе
         setcashier(cashier, fptr)
     #fptr = initKKT(None)
     #if fptr.isinstance(IFptr):
@@ -634,7 +655,7 @@ def openShift(cashier: json, fptr: IFptr):
 def closeShift(cashier: json, fptr: IFptr):
     if cashier:
         setcashier(cashier, fptr)
-    else: #TODO кассир не пришел, надо взять из БД
+    else: #TODO кассир не пришел, надо взять из БД, Реализовано в классе
         setcashier(cashier, fptr)
     #fptr = initKKT(None)
     #if fptr.isinstance(IFptr):

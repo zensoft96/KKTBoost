@@ -1,4 +1,3 @@
-from app import checkmark
 import kktfunc.kktfunctions as kkt
 
 

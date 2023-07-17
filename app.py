@@ -1,11 +1,9 @@
 from time import sleep
 from typing import Deque
-from flask import Flask, flash, redirect, request, render_template
+from flask import Flask, flash, request, render_template
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
-from libfptr10 import IFptr
 import json, uuid
-from kktfunc.cashier import Cashier #Кассира из json в объект
 from collections import deque
 from threading import Thread
 import jobs.jobsfunctions as jf
@@ -161,31 +159,41 @@ def props():
         return 'Error method'
 
 #Проверка кода маркировки json
+#FIXME Отсюда дичь, пока не исправишь передавать нельзя
 @app.route("/checkmark", methods=['POST'])
-#FIXME Надо переписать на работу через With с кассой смотри пример test.py
 def checkmark():
     if request.content_type == 'application/json':
         markCode = request.json.get('code')
-        #Проверяем есть ли что-то в очереди, если есть тогда добавляем задание, должны вернуть wait и UUID
-        if jobs.count(jobs) > 0:
-            return('ККТ в работе. Повторите попытку позже.')
+        if markCode is not None:
+            with kkt.Kassa() as kassa:
+                try:                    
+                    markresult = kassa.checkdm(markCode)
+                    return markresult
+                except Exception as ErrMessage:
+                    jobid = uuid.uuid4
+                    jobs.append({'jobname':'checkmark', 'jobid': jobid, 'parameters':{'markCode':markCode}})
+                    return f'Ошибка при выполнении запроса {ErrMessage}. Номер задачи в очереди {jobid}'
         else:
-            if markCode is not None:
-                jobs.appendleft({'jobname':'checkmark', 
-                                 'jobid':uuid.uuid4, 'parameters':{
-                                 'markCode': markCode}
-                                 })
-                initedkkt = kkt.initKKT(None)
-                if initedkkt.get('succes'):
-                    driver = initedkkt.get('driver')
-                    result = kkt.checkdm(driver, markCode)
-                    driver.close()
-                    jobs.popleft()
-                    return result
-                else:
-                    return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
-            else:
-                return 'Не правильный запрос'    
+            return 'Ждем кода маркировки для проверки'
+        # if jobs.count(jobs) > 0:
+        #     return('ККТ в работе. Повторите попытку позже.')
+        # else:
+        #     if markCode is not None:
+        #         jobs.appendleft({'jobname':'checkmark', 
+        #                          'jobid':uuid.uuid4, 'parameters':{
+        #                          'markCode': markCode}
+        #                          })
+        #         initedkkt = kkt.initKKT(None)
+        #         if initedkkt.get('succes'):
+        #             driver = initedkkt.get('driver')
+        #             result = kkt.checkdm(driver, markCode)
+        #             driver.close()
+        #             jobs.popleft()
+        #             return result
+        #         else:
+        #             return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+        #     else:
+        #         return 'Не правильный запрос'    
 
 @app.route("/settings", methods=['POST','GET'])
 def settings():
@@ -431,7 +439,7 @@ if __name__ == "__main__":
     sql_doned_jobs.create_table(safe=True)
     jobthread = Thread(target=jobs_in_thread, args=(jobs,))
     jobthread.start()
-    jobthread.join()
+    #jobthread.join()
     app.secret_key = 'hjaskjdhkjasdhjahdkhakjdhqwkhJHHKHY*(Y*Y*(*Y))'
     app.run(debug=False, port=5000, host="0.0.0.0")
     

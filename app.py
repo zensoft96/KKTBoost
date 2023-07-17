@@ -1,11 +1,14 @@
+from time import sleep
 from flask import Flask, flash, redirect, request, render_template
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
 from libfptr10 import IFptr
 import json
 from kktfunc.cashier import Cashier #Кассира из json в объект
+from collections import deque
 
 app = Flask(__name__)
+jobs = deque([])
 
 def returnedjson(success=True, descr=''):
     return json.dumps({'success': success,
@@ -25,6 +28,9 @@ def props():
     if request.method == 'POST':
         pass
     elif request.method == 'GET':
+        while jobs.count(jobs) > 0:
+            #Ждем обработки очереди
+            sleep(5)
         initedkkt = kkt.initKKT(None)
         if initedkkt.get('succes'):
             driver = initedkkt.get('driver')
@@ -33,7 +39,6 @@ def props():
             return render_template("props.html", allprops = kkt_props)
         else:
             flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
-            
     else:
         return 'Error method'
 
@@ -42,19 +47,23 @@ def props():
 def checkmark():
     if request.content_type == 'application/json':
         markCode = request.json.get('code')
-        if markCode is not None:
-            initedkkt = kkt.initKKT(None)
-            if initedkkt.get('succes'):
-                driver = initedkkt.get('driver')
-                #TODO Функция не принимает сейчас сам код, только экземпляр драйвера, надо поправить
-                result = kkt.checkdm(driver, markCode)
-                driver.close()
-                return result
-
-            else:
-                return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+        #Проверяем есть ли что-то в очереди, если есть тогда добавляем задание, должны вернуть wait и UUID
+        if jobs.count(jobs) > 0:
+            return('ККТ в работе. Повторите попытку позже.')
         else:
-            return 'Не правильный запрос'    
+            if markCode is not None:
+                jobs.appendleft({'jobname':'checkmark'})
+                initedkkt = kkt.initKKT(None)
+                if initedkkt.get('succes'):
+                    driver = initedkkt.get('driver')
+                    result = kkt.checkdm(driver, markCode)
+                    driver.close()
+                    jobs.pop()
+                    return result
+                else:
+                    return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+            else:
+                return 'Не правильный запрос'    
 
 @app.route("/settings", methods=['POST','GET'])
 def settings():
@@ -77,6 +86,9 @@ def settings():
                                    com = settingsdict.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settingsdict.get('LIBFPTR_SETTING_BAUDRATE'))
     elif request.method == 'GET':
+        while jobs.count(jobs) > 0:
+            #Ждем обработки очереди
+            sleep(5)
         current_settings = Settings.select().dicts()
         cashier = ''
         if len(current_settings) > 0:
@@ -135,6 +147,9 @@ def checkstatus():
 @app.route("/openShift", methods=['POST'])
 def openShift():
     if request.content_type == 'application/x-www-form-urlencoded':
+        while jobs.count(jobs) > 0:
+            #Ждем обработки очереди
+            sleep(5)
         initedkkt = kkt.initKKT(None)
         if initedkkt.get('succes'):
             driver = initedkkt.get('driver')
@@ -149,24 +164,31 @@ def openShift():
                 flash(errorstring)
                 return render_template('index.html')
     else:
-        inpjson = request.json
-        initedkkt = kkt.initKKT(None)
-        if initedkkt.get('succes'):
-            driver = initedkkt.get('driver')
-            shiftresult = kkt.openShift(inpjson, driver)
-            if shiftresult.get('succes'):
-                driver.close()
-                return returnedjson(True, '')
-            else:
-                errorstring = f'Ошибка при открытии смены {shiftresult.get("descr")}'
-                driver.close()
-                return returnedjson(True, errorstring)
-
-
+        if jobs.count(jobs) > 0:
+            return('ККТ в работе. Повторите попытку позже.')
+        else:
+            jobs.appendleft({'jobname':'openshift'})
+            inpjson = request.json
+            initedkkt = kkt.initKKT(None)
+            if initedkkt.get('succes'):
+                driver = initedkkt.get('driver')
+                shiftresult = kkt.openShift(inpjson, driver)
+                if shiftresult.get('succes'):
+                    jobs.pop()
+                    driver.close()
+                    return returnedjson(True, '')
+                else:
+                    errorstring = f'Ошибка при открытии смены {shiftresult.get("descr")}'
+                    jobs.pop()
+                    driver.close()
+                    return returnedjson(True, errorstring)
 
 @app.route("/closeShift", methods=['POST'])
 def closeShift():
     if request.content_type == 'application/x-www-form-urlencoded':
+        while jobs.count(jobs) > 0:
+            #Ждем обработки очереди
+            sleep(5)
         initedkkt = kkt.initKKT(None)
         if initedkkt.get('succes'):
             driver = initedkkt.get('driver')
@@ -188,25 +210,31 @@ def closeShift():
             flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
             return render_template('index.html')
     else:
-        inpjson = request.json
-        initedkkt = kkt.initKKT(None)
-        if initedkkt.get('succes'):
-            driver = initedkkt.get('driver')
-            if driver.isOpened():
-                result = kkt.closeShift(inpjson, driver)
-                if result.get('succes'):
-                    driver.close()
-                    return returnedjson(True, '')
-                else:
-                    driver.close()
-                    return returnedjson(False, result.get('descr'))
-            else:
-                driver.close()
-                return returnedjson(True, 'Смена закрыта')
+        if jobs.count(jobs) > 0:
+            return('ККТ в работе. Повторите попытку позже.')
         else:
-            return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
-            
-        
+            jobs.appendleft({'jobname':'closeshift'})
+            inpjson = request.json
+            initedkkt = kkt.initKKT(None)
+            if initedkkt.get('succes'):
+                driver = initedkkt.get('driver')
+                if driver.isOpened():
+                    result = kkt.closeShift(inpjson, driver)
+                    if result.get('succes'):
+                        jobs.pop()
+                        driver.close()
+                        return returnedjson(True, '')
+                    else:
+                        jobs.pop()
+                        driver.close()
+                        return returnedjson(False, result.get('descr'))
+                else:
+                    jobs.pop()
+                    driver.close()
+                    return returnedjson(True, 'Смена закрыта')
+            else:
+                return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+
 @app.route("/receipt", methods=['POST'])
 def receipt():
     import traceback
@@ -233,7 +261,9 @@ def receipt():
             return f'В параметре {where_str} пришли неверные данные. Ошибка: {what_str} '
         except:
             return 'Не все параметры пришли'
-        
+        if jobs.count(jobs) > 0:
+            return ('ККТ в работе. Повторите попытку позже.')
+        jobs.appendleft({'jobname':'receipt'})
         driver = initedkkt.get('driver')
         if checkType.upper().find('CORR') != -1:
             receiptResult = kkt.receipt(fptr=driver, checkType=checkType, 
@@ -247,20 +277,28 @@ def receipt():
                                     cashier={'cashierName': cashier[0]['cashierName'],
                                             'INN': cashier[0]['INN']},
                                     electronnically=electronnically,
-                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum)
-                                    # taxsum=taxsum)
-        return(receiptResult)        
+                                    sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
+                                    #taxsum=taxsum)
+        jobs.pop()
+        return receiptResult
     else:
         return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
 
 @app.route("/statusShift", methods=['POST'])
 def statusShift():
+    while jobs.count(jobs) > 0:
+            #Ждем обработки очереди
+            sleep(5)
+    jobs.appendleft({'jobname':'statusshift'})
     initedkkt = kkt.initKKT(None)
     if initedkkt.get('succes'):
         driver = initedkkt.get('driver')
         shiftStatus = kkt.checkShift(driver)
-        print(shiftStatus.get('descr'))
-        
+        driver.close()
+        jobs.pop()
+        #Удалить сам драйвер, чтобы были простые значения перед JSON
+        shiftStatus.pop('driver')
+        return json.dumps(shiftStatus, ensure_ascii=False)
     else:
         return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
 

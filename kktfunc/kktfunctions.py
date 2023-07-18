@@ -1,11 +1,202 @@
-from ast import If
+
 import json
-from logging import raiseExceptions
-from itsdangerous import base64_decode
-#from kktfunc.initkkt import initkkt
+from sys import exception
+from app import settings
 from libfptr10 import IFptr
 from sql.sqlfunc import *
 from time import time
+
+
+class Kassa():
+    
+    __busy = False
+        
+    def __init__(self) -> None:
+        self.settings = self.getkktsettings()
+            
+    # def __del__(self):
+    #     print('Закрытие ресурса')
+
+    #Получить настройки ККТ
+    def getkktsettings(self):
+        current_settings = Settings.select().dicts()
+        settingdict = {}
+        if len(current_settings) > 0:
+            for current_setting in current_settings:
+                try:
+                    CURRENT_SETTING = IFptr.__getattribute__(IFptr, current_setting.get('setting'))
+                except:
+                    CURRENT_SETTING = current_setting.get('setting')
+                if CURRENT_SETTING != 'ComFile' and CURRENT_SETTING != 'cashier':
+                    CURRENT_SETTING_VALUE = IFptr.__getattribute__(IFptr, current_setting.get('settingvalue'))
+                else:
+                    CURRENT_SETTING_VALUE = current_setting.get('settingvalue')
+                settingdict[CURRENT_SETTING] = CURRENT_SETTING_VALUE
+            return settingdict
+        else:
+            raise exception(f'Нет настроек ККТ в базе, зайдите в web и выполните начальную настройку кассы')
+        
+        
+    def close(self):
+        Kassa().__unsetBusy()
+        self.driver.close()
+        
+        
+    #Открытие смены
+    def openShift(self, cashier: json):
+        self.setcashier(cashier)
+        self.driver.openShift()
+        if self.driver.errorCode() == 0:
+            return self.creturnDict(True,{},None)
+        else:
+            raise exception(f'Ошибка при открытии смены {self.driver.errorDescription()}')
+            
+        
+    #Закрытие смены
+    def closeShift(self, cashier: json):
+        self.setcashier(cashier)
+        if self.driver.isOpened():
+            self.driver.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
+            self.driver.report()
+            if self.driver.errorCode() == 0:
+                return returnDict(True, '', None)
+            else:
+                raise exception(f'Ошибка при закрытии {self.driver.errorDescription()}')
+        else:
+            raise exception(f'Ошибка при закрытии {self.driver.errorDescription()}')
+    
+    def returnTextValidationResult (self, result):
+        text_results = {
+            '0' : "Проверка КП КМ не выполнена, статус товара ОИСМ не проверен [М]",
+            '1' : "Проверка КП КМ выполнена в ФН с отрицательным результатом, статус товара ОИСМ не проверен [М-]",
+            '3' : "Проверка КП КМ выполнена с положительным результатом, статус товара ОИСМ не проверен [М]",
+            '16' : "Проверка КП КМ не выполнена, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М]",
+            '17' : "Проверка КП КМ выполнена в ФН с отрицательным результатом, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М-]",
+            '19' : "Проверка КП КМ выполнена в ФН с положительным результатом, статус товара ОИСМ не проверен (ККТ функционирует в автономном режиме) [М]",
+            '5' : "Проверка КП КМ выполнена с отрицательным результатом, статус товара у ОИСМ некорректен [М-]",
+            '7' : "Проверка КП КМ выполнена с положительным результатом, статус товара у ОИСМ некорректен [М-]",
+            '15' : "Проверка КП КМ выполнена с положительным результатом, статус товара у ОИСМ корректен [М+]"
+
+        }
+        try:
+            result = text_results[result]
+            return result
+        except:
+            return 'Не получен статус проверки'
+    
+    #Проверка кода маркировки
+    def checkdm(self, DM_code):
+        start_time = time()
+        self.driver.cancelMarkingCodeValidation()
+
+        self.driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, '014494550435306821QXYXSALGLMYQQ\u001D91EE06\u001D92YWCXbmK6SN8vvwoxZFk7WAY9WoJNMGGr6Cgtiuja04c=')
+        self.driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, DM_code)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, 'ЗАЛУПА')
+        self.driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, 1.000)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
+        self.driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+        # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_FRACTIONAL_QUANTITY, '1/2')
+        self.driver.beginMarkingCodeValidation()
+
+        while True:
+            current_time = time()
+            self.driver.getMarkingCodeValidationStatus()
+            if self.driver.getParamBool(IFptr.LIBFPTR_PARAM_MARKING_CODE_VALIDATION_READY):
+                break
+            if int(current_time - start_time) >= 30:
+                break
+        validationResult = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+        # isRequestSent = fptr.getParamBool(IFptr.LIBFPTR_PARAM_IS_REQUEST_SENT)
+        # error = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR)
+        # errorDescription = fptr.getParamString(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_ERROR_DESCRIPTION)
+        # info = fptr.getParamInt(2109)
+        # processingResult = fptr.getParamInt(2005)
+        # processingCode = fptr.getParamInt(2105)
+        self.driver.acceptMarkingCode()
+        result = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+        return(returnTextValidationResult(str(result)))
+        
+        
+     # Установка кассира
+    def setcashier(self, cashier: json):
+        if cashier is None:
+            sqlsettings = Settings()
+            cashierName = sqlsettings.get_or_none(sqlsettings.setting == 'cashier')
+            if cashierName is not None:
+                self.driver.setParam(1021, cashierName)
+            else:
+                raise exception(f'Касир не получен в запросе, кассир по умолчанию не установлен')            
+        else:
+            self.driver.setParam(1021, cashier.get("cashierName"))
+            #self.driver.setParam(1203, "665811557830")
+            self.driver.operatorLogin()
+            if self.driver.errorCode() == 0:
+                return returnDict(True, '', None)
+            else:    
+                raise exception(f'Проблема при установке кассира {self.driver.errorDescription()}')
+                # return returnDict(False, fptr.errorDescription(), None)
+        
+    def settings():
+        pass
+    
+    
+    def creturnDict(self, success=False, parameters={}, errordesc=None):
+        """Возврат словаря
+        
+        Args:
+            success (bool): Успех выполнения
+            parameters (Dict): Словарь параметров выполнения
+            errordesc (str): Описание ошибки . Defaults to None.
+
+        Returns:
+            Dict: Словарь с передаваемыми значениями
+        """        
+        retDict = {'success':success,
+                   'errordesc': lambda x: errordesc if errordesc is not None else '',
+                   'parameters':parameters}
+        return retDict
+    
+    def __str__(self):
+        return f'ДрайверККТ инициализирован: {self.driver.isOpened()}'
+        
+    def __enter__(self):
+        if not Kassa().__busy:
+            fptr = IFptr("")
+            fptr.setSettings(self.settings)
+            fptr.open()
+            if fptr.isOpened():
+                #Удачно соединились, драйвер есть
+                Kassa().__setBusy()
+                self.driver = fptr
+                return self
+            else:
+                #Неудачно соединились, вернуть exit
+                raise Exception(f'Проблема инициализации драйвера возможно ККТ выключена')
+        else:
+            raise Exception(f'Класс касса в статусе busy')
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        #Убираем флаг занято
+        Kassa().__unsetBusy()
+        #Выключаем работу с драйвером
+        self.driver.close()
+        #Возвращаем ответ
+        if exc_type is not None:
+            return self.creturnDict(False, f'Зафиксировано исключение {exc_value}, тип исключения {exc_type}')
+        else:
+            return self.creturnDict(success=True)
+        
+        
+    @classmethod
+    def __setBusy(cls):
+        cls.__busy = True
+    
+    @classmethod
+    def __unsetBusy(cls):
+        cls.__busy = False
+        
 
 def returnDict(success: bool, errorDesc: str, fptr: IFptr):
     """Возвращает словарь с параметрами выполнения функции
@@ -60,7 +251,8 @@ def tax(strtax:str):
     return taxes.get(strtax)
 
 def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
-            cashelesssum: float, taxsum:float, corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0'):
+            cashelesssum: float, #taxsum:float, 
+            corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0'):
     """Формирование чека состоит из следующих операций:
     открытие чека и передача реквизитов чека;
     регистрация позиций, печать нефискальных данных (текст, штрихкоды, изображения);
@@ -103,7 +295,7 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     #Налогообложение
     fptr.setParam(1055, snoClass(sno=sno))
 
-    if checkType.upper().find('CORR'):
+    if checkType.upper().find('CORR') != -1:
         fptr.setParam(1178, corrBaseDate)
         fptr.setParam(1179, corrBaseNum)
         fptr.utilFormTlv() #формируется основание для коррекции на основании реквизитов 1178 и 1179
@@ -168,7 +360,7 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
     
     
     fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, goodtax)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, taxsum)
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, taxsum)
     fptr.receiptTax()
     if fptr.errorCode() > 0:
         sumerrors += f'\n {fptr.errorDescription()}'
@@ -214,8 +406,8 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         'receiptSum' : fptr.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
         'fiscalSign' : fptr.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN),
         'dateTime' : fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME),
-        'shiftNumber' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER),
-        'receiptNumber' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)}
+        'shiftNumber': fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER),
+        'receiptNumber': fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)}
         return resultDict
     else:
         return f'Проблема запроса ФПД чека {fptr.errorDescription()}'
@@ -452,7 +644,7 @@ def setcashier(cashier: json, fptr: IFptr):
 def openShift(cashier: json, fptr: IFptr):
     if cashier:
         setcashier(cashier, fptr)
-    else: #TODO кассир не пришел, надо взять из БД
+    else: #TODO кассир не пришел, надо взять из БД, Реализовано в классе
         setcashier(cashier, fptr)
     #fptr = initKKT(None)
     #if fptr.isinstance(IFptr):
@@ -466,7 +658,7 @@ def openShift(cashier: json, fptr: IFptr):
 def closeShift(cashier: json, fptr: IFptr):
     if cashier:
         setcashier(cashier, fptr)
-    else: #TODO кассир не пришел, надо взять из БД
+    else: #TODO кассир не пришел, надо взять из БД, Реализовано в классе
         setcashier(cashier, fptr)
     #fptr = initKKT(None)
     #if fptr.isinstance(IFptr):

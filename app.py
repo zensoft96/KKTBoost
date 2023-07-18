@@ -1,14 +1,113 @@
 from time import sleep
-from flask import Flask, flash, redirect, request, render_template
+from typing import Deque
+from flask import Flask, flash, request, render_template
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
-from libfptr10 import IFptr
-import json
-from kktfunc.cashier import Cashier #Кассира из json в объект
+import json, uuid
 from collections import deque
+from threading import Thread
+import jobs.jobsfunctions as jf
 
 app = Flask(__name__)
-jobs = deque([])
+jobs = deque([], maxlen=50)
+#Для теста задач, потом удалить нахуй
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229CgQXbjYAAAA2X9F'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229eqX4A3kAAAA0tKf'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229A4K4mtFAAAAhv8Z'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229\';r2lV"AAAAX3Id'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229ZGI+v3\'AAAAVYr8'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229r9GcX%nAAAAbIHi'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229KXAQhhFAAAAjt0m'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229!ZNntFnAAAAs++F'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229YeLyE/CAAAAG1UU'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229LEEMJiiAAAAs+ds'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229C4S*skFAAAATeNR'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'046037311752292msEGEpAAAAYng0'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229,LFRB2:AAAA5/L+'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229REr2!>SAAAA+TVy'
+# }})
+# jobs.append({'jobname':'checkmark', 
+#              'jobid': uuid.uuid4,
+#              'parameters':{
+#     'markCode':'04603731175229uGTEsgbAAAA0BEu'
+# }})
+
+def jobs_in_thread(queuejobs: Deque):
+    """Для выполнения в потоке
+    Args:
+        queuejobs (Deque): Очередь задач
+    """    
+    while True:
+        if len(queuejobs) > 0:
+            # Возьмем первый элемент, попробуем обработать и поставим в конец
+            print('Есть задача')
+            firstjob = queuejobs.popleft()
+            jobname = firstjob.get('jobname')
+            jobparameters = firstjob.get('parameters')
+            jobid = firstjob.get('jobid')
+            nowjob = jf.Job(jobname=jobname, jobid=jobid, jobparameters=jobparameters)
+            result = nowjob.completeTask()
+            if not result:
+                queuejobs.append(nowjob.task_to_dict())
+            else:
+                resultjob = Doned_jobs.insert(jobid=jobid, resulttext=result, recieved=False)
+                resultjob.execute()
+                
 
 def returnedjson(success=True, descr=''):
     return json.dumps({'success': success,
@@ -22,6 +121,24 @@ def hello():
         return render_template('index.html')
     else:
         return True
+
+@app.route('/jobresult/<job_id>', methods=['GET'])
+def getjob(job_id:str):
+    currentJob = Doned_jobs.get_or_none(Doned_jobs.job_id == job_id)
+    if currentJob is None:
+        return json.dumps({
+            'result': False,
+            'error':'Нет задачи с UID {job_id}'
+            }, ensure_ascii=False)
+    else:
+        currentJob.recieved = True
+        currentJob.save()
+        return json.dumps({
+                           'result': True,
+                           'error': '',
+                           'parameters': currentJob.result_text
+                           },ensure_ascii=False)
+        
 
 @app.route("/props", methods=['POST', 'GET'])
 def props():
@@ -42,28 +159,46 @@ def props():
     else:
         return 'Error method'
 
+@app.errorhandler(500)
+def internal_server_error(e):
+    return str(e.original_exception)
+
+
 #Проверка кода маркировки json
 @app.route("/checkmark", methods=['POST'])
 def checkmark():
     if request.content_type == 'application/json':
         markCode = request.json.get('code')
-        #Проверяем есть ли что-то в очереди, если есть тогда добавляем задание, должны вернуть wait и UUID
-        if jobs.count(jobs) > 0:
-            return('ККТ в работе. Повторите попытку позже.')
-        else:
+        try:
             if markCode is not None:
-                jobs.appendleft({'jobname':'checkmark'})
-                initedkkt = kkt.initKKT(None)
-                if initedkkt.get('succes'):
-                    driver = initedkkt.get('driver')
-                    result = kkt.checkdm(driver, markCode)
-                    driver.close()
-                    jobs.pop()
-                    return result
-                else:
-                    return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+                with kkt.Kassa() as kassa:
+                        markresult = kassa.checkdm(markCode)
+                        return markresult
             else:
-                return 'Не правильный запрос'    
+                return 'Ждем кода маркировки для проверки'
+        except Exception as ErrMessage:
+                    jobid = str(uuid.uuid4())
+                    jobs.append({'jobname':'checkmark', 'jobid': jobid, 'parameters':{'markCode':markCode}})
+                    return f'Ошибка при выполнении запроса {ErrMessage}. Номер задачи в очереди {jobid}'
+        # if jobs.count(jobs) > 0:
+        #     return('ККТ в работе. Повторите попытку позже.')
+        # else:
+        #     if markCode is not None:
+        #         jobs.appendleft({'jobname':'checkmark', 
+        #                          'jobid':uuid.uuid4, 'parameters':{
+        #                          'markCode': markCode}
+        #                          })
+        #         initedkkt = kkt.initKKT(None)
+        #         if initedkkt.get('succes'):
+        #             driver = initedkkt.get('driver')
+        #             result = kkt.checkdm(driver, markCode)
+        #             driver.close()
+        #             jobs.popleft()
+        #             return result
+        #         else:
+        #             return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+        #     else:
+        #         return 'Не правильный запрос'    
 
 @app.route("/settings", methods=['POST','GET'])
 def settings():
@@ -86,7 +221,7 @@ def settings():
                                    com = settingsdict.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settingsdict.get('LIBFPTR_SETTING_BAUDRATE'))
     elif request.method == 'GET':
-        while jobs.count(jobs) > 0:
+        while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
         current_settings = Settings.select().dicts()
@@ -147,7 +282,7 @@ def checkstatus():
 @app.route("/openShift", methods=['POST'])
 def openShift():
     if request.content_type == 'application/x-www-form-urlencoded':
-        while jobs.count(jobs) > 0:
+        while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
         initedkkt = kkt.initKKT(None)
@@ -164,7 +299,7 @@ def openShift():
                 flash(errorstring)
                 return render_template('index.html')
     else:
-        if jobs.count(jobs) > 0:
+        if len(jobs) > 0:
             return('ККТ в работе. Повторите попытку позже.')
         else:
             jobs.appendleft({'jobname':'openshift'})
@@ -186,7 +321,7 @@ def openShift():
 @app.route("/closeShift", methods=['POST'])
 def closeShift():
     if request.content_type == 'application/x-www-form-urlencoded':
-        while jobs.count(jobs) > 0:
+        while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
         initedkkt = kkt.initKKT(None)
@@ -210,7 +345,7 @@ def closeShift():
             flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
             return render_template('index.html')
     else:
-        if jobs.count(jobs) > 0:
+        if len(jobs) > 0:
             return('ККТ в работе. Повторите попытку позже.')
         else:
             jobs.appendleft({'jobname':'closeshift'})
@@ -247,7 +382,7 @@ def receipt():
             cashsum = float(request.json['cashsum'])
             goods = request.json['goods']
             cashier = request.json['cashier']
-            taxsum = float(request.json['taxsum'])
+            # taxsum = float(request.json['taxsum'])
             cashelesssum = float(request.json['cashelesssum'])
             if checkType.upper().find('CORR') != -1:
                 corrType = request.json["correctionType"]
@@ -261,7 +396,7 @@ def receipt():
             return f'В параметре {where_str} пришли неверные данные. Ошибка: {what_str} '
         except:
             return 'Не все параметры пришли'
-        if jobs.count(jobs) > 0:
+        if len(jobs) > 0:
             return ('ККТ в работе. Повторите попытку позже.')
         jobs.appendleft({'jobname':'receipt'})
         driver = initedkkt.get('driver')
@@ -270,7 +405,7 @@ def receipt():
                                     cashier={'cashierName': cashier[0]['cashierName'],
                                             'INN': cashier[0]['INN']},
                                     electronnically=electronnically, sno=sno, cashsum=cashsum, 
-                                    goods=goods,cashelesssum=cashelesssum, taxsum=taxsum, 
+                                    goods=goods,cashelesssum=cashelesssum, #taxsum=taxsum, 
                                     corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum)
         else:
             receiptResult = kkt.receipt(fptr=driver, checkType=checkType, 
@@ -278,7 +413,7 @@ def receipt():
                                             'INN': cashier[0]['INN']},
                                     electronnically=electronnically,
                                     sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
-                                    taxsum=taxsum)
+                                    #taxsum=taxsum)
         jobs.pop()
         return receiptResult
     else:
@@ -286,7 +421,7 @@ def receipt():
 
 @app.route("/statusShift", methods=['POST'])
 def statusShift():
-    while jobs.count(jobs) > 0:
+    while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
     jobs.appendleft({'jobname':'statusshift'})
@@ -307,6 +442,11 @@ def statusShift():
 if __name__ == "__main__":
     sqlsettings = Settings()
     sqlsettings.create_table(safe=True)
+    sql_doned_jobs = Doned_jobs()
+    sql_doned_jobs.create_table(safe=True)
+    jobthread = Thread(target=jobs_in_thread, args=(jobs,))
+    jobthread.start()
+    #jobthread.join()
     app.secret_key = 'hjaskjdhkjasdhjahdkhakjdhqwkhJHHKHY*(Y*Y*(*Y))'
     app.run(debug=False, port=5000, host="0.0.0.0")
     

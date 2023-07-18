@@ -3,6 +3,7 @@ from time import sleep
 from turtle import circle
 from typing import Deque
 from flask import Flask, flash, request, render_template, Response, redirect, url_for
+from kktfunc.cashier import Cashier
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
 import json, uuid
@@ -318,24 +319,18 @@ def openShift():
     else:
         try:
             with kkt.Kassa() as kassa:        
-                pass
-                # jobs.appendleft({'jobname':'openshift'})
-                # inpjson = request.json
-                # initedkkt = kkt.initKKT(None)
-                # if initedkkt.get('succes'):
-                #     driver = initedkkt.get('driver')
-                #     shiftresult = kkt.openShift(inpjson, driver)
-                #     if shiftresult.get('succes'):
-                #         jobs.pop()
-                #         driver.close()
-                #         return returnedjson(True, '')
-                #     else:
-                #         errorstring = f'Ошибка при открытии смены {shiftresult.get("descr")}'
-                #         jobs.pop()
-                #         driver.close()
-                #         return returnedjson(True, errorstring)
+                cashier = request.json.get('cashier')
+                shiftresult = kassa.openShift(cashier=cashier[0])
+                returnedJson = json.dumps(shiftresult, ensure_ascii=False)
+                if shiftresult.get('success'):
+                    rc = 200
+                else:
+                    rc = 201
+                response = app.response_class(response=returnedJson, status=rc, content_type='application/json')                
+                return response
+                
         except Exception as ErrMessage:
-            response = app.response_class(response=f'Ошибка при выполнении запроса {ErrMessage}. Номер задачи в очереди {jobid}',
+            response = app.response_class(response=f'Ошибка при выполнении запроса {ErrMessage}.',
                                             status=503, content_type='application/json')
             return response
 
@@ -345,51 +340,36 @@ def closeShift():
         while len(jobs) > 0:
             #Ждем обработки очереди
             sleep(5)
-        initedkkt = kkt.initKKT(None)
-        if initedkkt.get('succes'):
-            driver = initedkkt.get('driver')
-            if driver.isOpened():
-                result = kkt.closeShift(None, driver)
-                if result.get('succes'):
-                    driver.close()
-                    flash('Успешно закрыта')
+        try:
+            with kkt.Kassa() as kassa:
+                shiftresult = kassa.closeShift(None)
+                if shiftresult.get('success'):
+                    flash('Смена успешно Закрыта')
                     return render_template('index.html')
                 else:
-                    driver.close()
-                    flash(f'Ошибка закрытия {result.get("descr")}')
+                    flash(f'Ошибка при закрытии смены. {shiftresult.get("errordesc")}')
                     return render_template('index.html')
-            else:
-                driver.close()
-                flash("Смена уже закрыта")
-                return render_template('index.html')
-        else:
-            flash(f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
-            return render_template('index.html')
+        except Exception as ErrMessage:
+                    errorStr = f'Ошибка при закрытии смены на ККТ. {ErrMessage.args[0]}'
+                    flash(errorStr)
+                    return render_template('index.html')
     else:
-        if len(jobs) > 0:
-            return('ККТ в работе. Повторите попытку позже.')
-        else:
-            jobs.appendleft({'jobname':'closeshift'})
-            inpjson = request.json
-            initedkkt = kkt.initKKT(None)
-            if initedkkt.get('succes'):
-                driver = initedkkt.get('driver')
-                if driver.isOpened():
-                    result = kkt.closeShift(inpjson, driver)
-                    if result.get('succes'):
-                        jobs.pop()
-                        driver.close()
-                        return returnedjson(True, '')
-                    else:
-                        jobs.pop()
-                        driver.close()
-                        return returnedjson(False, result.get('descr'))
+        try:
+            with kkt.Kassa() as kassa:        
+                cashier = request.json.get('cashier')
+                shiftresult = kassa.closeShift(cashier=cashier[0])
+                returnedJson = json.dumps(shiftresult, ensure_ascii=False)
+                if shiftresult.get('success'):
+                    rc = 200
                 else:
-                    jobs.pop()
-                    driver.close()
-                    return returnedjson(True, 'Смена закрыта')
-            else:
-                return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+                    rc = 201
+                response = app.response_class(response=returnedJson, status=rc, content_type='application/json')                
+                return response
+                
+        except Exception as ErrMessage:
+            response = app.response_class(response=f'Ошибка при выполнении запроса {ErrMessage}.',
+                                            status=503, content_type='application/json')
+            return response
 
 @app.route("/receipt", methods=['POST'])
 def receipt():
@@ -449,21 +429,32 @@ def receipt():
 
 @app.route("/statusShift", methods=['POST'])
 def statusShift():
-    while len(jobs) > 0:
-            #Ждем обработки очереди
-            sleep(5)
-    jobs.appendleft({'jobname':'statusshift'})
-    initedkkt = kkt.initKKT(None)
-    if initedkkt.get('succes'):
-        driver = initedkkt.get('driver')
-        shiftStatus = kkt.checkShift(driver)
-        driver.close()
-        jobs.pop()
-        #Удалить сам драйвер, чтобы были простые значения перед JSON
-        shiftStatus.pop('driver')
-        return json.dumps(shiftStatus, ensure_ascii=False)
-    else:
-        return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+    try:
+        with kkt.Kassa() as kassa:
+            shiftResult = kassa.checkShift()
+            if shiftResult is not None:
+                retCode = 0 
+                if shiftResult.get('Expired'):
+                    retCode = 3
+                elif shiftResult.get('Opened') and not shiftResult.get('Expired'):
+                    retCode = 2
+                elif shiftResult.get('Closed'):
+                    retcode = 1
+                returnDict = {}
+                returnDict['success'] = True
+                returnDict['shiftStatus'] = retcode
+                retJson = json.dumps(returnDict, ensure_ascii=False)
+                response = app.response_class(response=retJson, status=200, content_type='application/json')
+                return response
+            else:
+                retJson = json.dumps(shiftDict)
+                response = app.response_class(response=retJson, status=503, content_type='application/json')
+                return response
+    except Exception as ErrMessage:
+            response = app.response_class(response=f'Ошибка при выполнении запроса {ErrMessage}.',
+                                            status=503, content_type='application/json')
+            return response    
+
 
 if __name__ == "__main__":
     sqlsettings = Settings()

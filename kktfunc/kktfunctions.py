@@ -47,6 +47,18 @@ class Kassa():
         else:
             raise KassaCriticalError(f'Нет настроек ККТ в базе, зайдите в web и выполните начальную настройку кассы')
         
+    #Текущее состояние смены
+    def checkShift(self):
+        driver = self.driver
+        driver.setParam(IFptr.LIBFPTR_PARAM_DATA_TYPE, IFptr.LIBFPTR_DT_STATUS)
+        driver.queryData()
+        shiftState = driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_STATE)
+        shiftDict = {}
+        shiftDict['Closed'] = shiftState == IFptr.LIBFPTR_SS_CLOSED
+        shiftDict['Expired'] = shiftState == IFptr.LIBFPTR_SS_EXPIRED
+        shiftDict['Opened'] = shiftState == IFptr.LIBFPTR_SS_OPENED
+        return shiftDict
+    
     def receipt(self, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
             cashelesssum: float, #taxsum:float, 
             corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0'):
@@ -282,7 +294,10 @@ class Kassa():
     #Открытие смены
     def openShift(self, cashier: json):
         driver = self.driver
-        self.setcashier(cashier)
+        try:
+            self.setcashier(cashier)
+        except Exception as SetCashierError:
+            return self.creturnDict(False, {}, SetCashierError)
         driver.openShift()
         if driver.errorCode() == 0:
             return self.creturnDict(True,{},None)
@@ -293,16 +308,19 @@ class Kassa():
     #Закрытие смены
     def closeShift(self, cashier: json):
         driver = self.driver
-        self.setcashier(cashier)
+        try:
+            self.setcashier(cashier)
+        except Exception as SetCashierError:
+            return self.creturnDict(False, {}, SetCashierError)
         if driver.isOpened():
             driver.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
             driver.report()
             if driver.errorCode() == 0:
-                return returnDict(True, '', None)
+                return self.creturnDict(True, {}, None)
             else:
-                raise exception(f'Ошибка при закрытии {driver.errorDescription()}')
+                return self.creturnDict(False,{}, f'{driver.errorDescription()}')
         else:
-            raise exception(f'Ошибка при закрытии {driver.errorDescription()}')
+            return self.creturnDict(False,{}, f'Ошибка проверки обр к драйверу {driver.errorDescription()}')
     
     def returnTextValidationResult (self, result):
         text_results = {
@@ -345,7 +363,7 @@ class Kassa():
             driver.getMarkingCodeValidationStatus()
             if driver.getParamBool(IFptr.LIBFPTR_PARAM_MARKING_CODE_VALIDATION_READY):
                 break
-            if int(current_time - start_time) >= 30:
+            if int(current_time - start_time) >= 7:
                 break
         validationResult = driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
         # isRequestSent = fptr.getParamBool(IFptr.LIBFPTR_PARAM_IS_REQUEST_SENT)

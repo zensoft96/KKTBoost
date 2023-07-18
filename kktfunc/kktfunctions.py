@@ -213,7 +213,9 @@ def receipt(fptr:IFptr, checkType:str, cashier:dict, electronnically:bool, sno: 
         'receiptType' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE),
         'receiptSum' : fptr.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
         'fiscalSign' : fptr.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN),
-        'dateTime' : fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)}
+        'dateTime' : fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME),
+        'shiftNumber' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER),
+        'receiptNumber' : fptr.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)}
         return resultDict
     else:
         return f'Проблема запроса ФПД чека {fptr.errorDescription()}'

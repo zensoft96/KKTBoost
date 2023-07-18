@@ -429,6 +429,8 @@ def statusShift():
     if initedkkt.get('succes'):
         driver = initedkkt.get('driver')
         shiftStatus = kkt.checkShift(driver)
+        shiftStatus['shiftNumber']  = driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER)
+        shiftStatus['receiptNumber'] = driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)
         driver.close()
         jobs.pop()
         #Удалить сам драйвер, чтобы были простые значения перед JSON

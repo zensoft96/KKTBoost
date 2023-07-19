@@ -435,10 +435,10 @@ def statusShift():
                 elif shiftResult.get('Opened') and not shiftResult.get('Expired'):
                     retCode = 2
                 elif shiftResult.get('Closed'):
-                    retcode = 1
+                    retCode = 1
                 returnDict = {}
                 returnDict['success'] = True
-                returnDict['shiftStatus'] = retcode
+                returnDict['shiftStatus'] = retCode
                 retJson = json.dumps(returnDict, ensure_ascii=False)
                 response = app.response_class(response=retJson, status=200, content_type='application/json')
                 return response

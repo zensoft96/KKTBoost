@@ -86,7 +86,7 @@ jobs = deque([], maxlen=50)
 #     'markCode':'04603731175229uGTEsgbAAAA0BEu'
 # }})
 
-def jobs_in_thread(queuejobs: Deque):
+def jobs_in_thread(queuejobs: deque):
     """Для выполнения в потоке
     Args:
         queuejobs (Deque): Очередь задач

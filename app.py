@@ -1,9 +1,5 @@
-import stat
 from time import sleep
-from turtle import circle
-from typing import Deque
 from flask import Flask, flash, request, render_template, Response, redirect, url_for
-from kktfunc.cashier import Cashier
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
 import json, uuid
@@ -90,7 +86,7 @@ jobs = deque([], maxlen=50)
 #     'markCode':'04603731175229uGTEsgbAAAA0BEu'
 # }})
 
-def jobs_in_thread(queuejobs: Deque):
+def jobs_in_thread(queuejobs: deque):
     """Для выполнения в потоке
     Args:
         queuejobs (Deque): Очередь задач
@@ -447,7 +443,9 @@ def statusShift():
                 response = app.response_class(response=retJson, status=200, content_type='application/json')
                 return response
             else:
-                retJson = json.dumps(shiftDict)
+                returnDict = {}
+                returnDict['success'] = False
+                retJson = json.dumps(returnDict)
                 response = app.response_class(response=retJson, status=503, content_type='application/json')
                 return response
     except Exception as ErrMessage:

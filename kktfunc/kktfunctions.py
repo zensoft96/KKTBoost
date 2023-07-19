@@ -1,7 +1,6 @@
 
 import json
 from sys import exception
-from app import settings
 from libfptr10 import IFptr
 from sql.sqlfunc import *
 from time import time

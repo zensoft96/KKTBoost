@@ -1,9 +1,5 @@
-import stat
 from time import sleep
-from turtle import circle
-from typing import Deque
 from flask import Flask, flash, request, render_template, Response, redirect, url_for
-from kktfunc.cashier import Cashier
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
 import json, uuid

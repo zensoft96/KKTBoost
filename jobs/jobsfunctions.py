@@ -1,14 +1,29 @@
+from uuid import uuid4
 import kktfunc.kktfunctions as kkt
 
 
 class Job:
-    def __init__(self, jobname, jobparameters, jobid) -> None:
+    """Работа в очереди
+    """
+    def __init__(self, jobname:str, jobparameters:dict, jobid:uuid4, jobrotate:int) -> None:
+        """_Работа в очереди_
+
+        Args:
+            jobname (str): Наименование работы checkmark(ПроверкаКМ), openShift(ОткрСмены), closeShift, receipt(Чек)
+            jobparameters (dict): Параметры задачи, принятные в запросе и требуемые для функции обработки
+            jobid (uuid4): UUID4 - Угикальные номер задачи, по которому ее можно будет запросить
+            jobrotate (int):  Сколько раз задача попыталась выполниться
+        """
         self.jobname = jobname
         self.jobparameters = jobparameters
         self.jobid = jobid
+        if jobrotate is None:
+            self.jobrotate = 0
+        else:
+            self.jobrotate = jobrotate
         
     def __str__(self) -> str:
-        return f'Name: {self.jobname}, ID: {self.jobid}, Parameters: {self.jobparameters}'
+        return f'Name: {self.jobname}, ID: {self.jobid}, Parameters: {self.jobparameters}, Rotate: {self.jobrotate}'
     
     def completeTask(self):
         try:
@@ -33,6 +48,7 @@ class Job:
                                     corrBaseNum=self.jobparameters.get('corrBaseNum'))
                 return taskresult
         except:
+            self.jobrotate += 1
             return None
             
     
@@ -41,4 +57,5 @@ class Job:
         retdict['jobname'] = self.jobname
         retdict['parameters'] = self.jobparameters
         retdict['jobid'] = self.jobid
+        retdict['jobrotate'] = self.jobrotate
         return retdict

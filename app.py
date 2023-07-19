@@ -447,7 +447,9 @@ def statusShift():
                 response = app.response_class(response=retJson, status=200, content_type='application/json')
                 return response
             else:
-                retJson = json.dumps(shiftDict)
+                returnDict = {}
+                returnDict['success'] = False
+                retJson = json.dumps(returnDict)
                 response = app.response_class(response=retJson, status=503, content_type='application/json')
                 return response
     except Exception as ErrMessage:

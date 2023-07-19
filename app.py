@@ -439,6 +439,8 @@ def statusShift():
                 returnDict = {}
                 returnDict['success'] = True
                 returnDict['shiftStatus'] = retCode
+                returnDict['shiftNumber'] = shiftResult.get('shiftNumber')
+                returnDict['receiptNumber'] = shiftResult.get('receiptNumber')
                 retJson = json.dumps(returnDict, ensure_ascii=False)
                 response = app.response_class(response=retJson, status=200, content_type='application/json')
                 return response

@@ -69,6 +69,9 @@ class Kassa():
         shiftDict['Closed'] = shiftState == IFptr.LIBFPTR_SS_CLOSED
         shiftDict['Expired'] = shiftState == IFptr.LIBFPTR_SS_EXPIRED
         shiftDict['Opened'] = shiftState == IFptr.LIBFPTR_SS_OPENED
+        shiftDict['shiftNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER)
+        shiftDict['receiptNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)
+                
         return shiftDict
     
     def snoClass(self, sno):

@@ -131,7 +131,8 @@ class Kassa():
     # fptr.cancelMarkingCodeValidation()
         driver = self.driver
         for good in goods:
-            self.checkdm(good['markingcode'])
+            if good.get('markingcode') is not None:
+                self.checkdm(good['markingcode'])
         
         sumerrors = "" #Для сбора промежуточных ошибок
         self.setcashier(cashier=cashier)
@@ -187,15 +188,14 @@ class Kassa():
             # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT))
             # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
 
-        
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_WAIT_FOR_VALIDATION_RESULT, True)
-            
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
-            validationResult = driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, validationResult)
+            if good.get('markingcode') is not None:
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_WAIT_FOR_VALIDATION_RESULT, True)
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+                validationResult = driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, validationResult)
             
             driver.registration()
         
@@ -230,7 +230,10 @@ class Kassa():
             errorDesc = driver.errorDescription()
             errorCode = driver.errorCode()
             driver.close()
-            return f'Не удалось проверить состояние документа {errorDesc} код ошибки {errorCode}. Промежуточные ошибки {sumerrors}'
+            return {
+                'success': False, 
+                'errorDesc':f'Не удалось проверить состояние документа {errorDesc} код ошибки {errorCode}. Промежуточные ошибки {sumerrors}'
+                }
         
         if not driver.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):
             # Документ не закрылся. Требуется его отменить (если это чек) и сформировать заново
@@ -238,7 +241,10 @@ class Kassa():
             errorDesc = driver.errorDescription()
             errorCode = driver.errorCode()
             driver.close()
-            return f'Не удалось закрыть документ {errorDesc} код ошибки {errorCode}. Промежуточные ошибки {sumerrors}'
+            return {
+                'success': False,
+                'errorDesc': f'Не удалось закрыть документ {errorDesc} код ошибки {errorCode}. Промежуточные ошибки {sumerrors}'
+            }
 
         if not driver.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_PRINTED):
         # Можно сразу вызвать метод допечатывания документа, он завершится с ошибкой, если это невозможно
@@ -247,21 +253,29 @@ class Kassa():
                 errorDesc = driver.errorDescription()
                 errorCode = driver.errorCode()
                 driver.close()
-                return f'Не удалось напечатать документ (Ошибка {errorDesc}). Устраните неполадку и повторите. Промежуточные ошибки {sumerrors}'
+                return {
+                    'sucess': False,
+                    'errorDesc': f'Не удалось напечатать документ (Ошибка {errorDesc}). Устраните неполадку и повторите. Промежуточные ошибки {sumerrors}'
+                }
+                
         #Все проверки пройдены, чек есть, запрашиваем параметры
         driver.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_LAST_RECEIPT)
         driver.fnQueryData()
         if driver.errorCode() == 0:
-            resultDict = {'documentNumber' : driver.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_NUMBER),
-            'receiptType' : driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE),
-            'receiptSum' : driver.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
-            'fiscalSign' : driver.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN),
-            'dateTime' : driver.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME),
-            'shiftNumber': driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER),
-            'receiptNumber': driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)}
+            resultDict = {
+                        'success': True,
+                        'documentNumber' : driver.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_NUMBER),
+                        'receiptType' : driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE),
+                        'receiptSum' : driver.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
+                        'fiscalSign' : driver.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN),
+                        'dateTime' : driver.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME),
+                        'shiftNumber': driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER),
+                        'receiptNumber': driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)}
             return resultDict
         else:
-            return f'Проблема запроса ФПД чека {driver.errorDescription()}'
+            return {
+                'success': False,
+                'errorDesc': f'Проблема запроса ФПД чека {driver.errorDescription()}'}
         
     def receipt_type(self, LIBFPTR_PARAM_RECEIPT_TYPE: IFptr.LIBFPTR_PARAM_RECEIPT_TYPE):
         """ Возврат типа чека, либо чек закрыт

@@ -414,7 +414,14 @@ def receipt():
                                         sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum)
                                         #taxsum=taxsum)
                                         
-            return receiptResult
+            if receiptResult.get('success'):
+                response = app.response_class(
+                    response=json.dumps(receiptResult, ensure_ascii=False),
+                    status=200, content_type='application/json')
+            else:
+                response = app.response_class(
+                    response=json.dumps(receiptResult, ensure_ascii=False),
+                    status=500, content_type='application/json')
     except Exception as ErrMessage:
                     if isinstance(ErrMessage,type(kkt.KassaCriticalError())):
                         response = app.response_class(response=f'Ошибка инициализации ККТ {ErrMessage.args[0]}',

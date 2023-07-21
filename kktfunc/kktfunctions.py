@@ -94,7 +94,8 @@ class Kassa():
     # fptr.cancelMarkingCodeValidation()
         driver = self.driver
         for good in goods:
-            self.checkdm(good['markingcode'])
+            if good.get('markingcode') is not None:
+                self.checkdm(good['markingcode'])
         
         sumerrors = "" #Для сбора промежуточных ошибок
         self.setcashier(cashier=cashier)
@@ -150,16 +151,16 @@ class Kassa():
             # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT))
             # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
 
-        
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_WAIT_FOR_VALIDATION_RESULT, True)
-            
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
-            validationResult = driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
-            driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, validationResult)
-            
+            if good.get('markingcode') is not None:
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 1)
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_WAIT_FOR_VALIDATION_RESULT, True)
+                
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+                validationResult = driver.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+                driver.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT, validationResult)
+                
             driver.registration()
         
         if cashelesssum > 0:
@@ -317,10 +318,17 @@ class Kassa():
         if driver.isOpened():
             driver.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
             driver.report()
+            shiftState = driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_STATE)
+            shiftDict = {}
+            shiftDict['Closed'] = shiftState == IFptr.LIBFPTR_SS_CLOSED
+            shiftDict['Expired'] = shiftState == IFptr.LIBFPTR_SS_EXPIRED
+            shiftDict['Opened'] = shiftState == IFptr.LIBFPTR_SS_OPENED
+            shiftDict['shiftNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER)
+            shiftDict['receiptNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)               
             if driver.errorCode() == 0:
-                return self.creturnDict(True, {}, None)
+                return self.creturnDict(True, shiftDict, None)
             else:
-                return self.creturnDict(False,{}, f'{driver.errorDescription()}')
+                return self.creturnDict(False, {}, f'{driver.errorDescription()}')
         else:
             return self.creturnDict(False,{}, f'Ошибка проверки обр к драйверу {driver.errorDescription()}')
     
@@ -389,7 +397,7 @@ class Kassa():
                 driver.setParam(1021, cashierName.settingvalue)
                 return self
             else:
-                raise exception(f'Касир не получен в запросе, кассир по умолчанию не установлен')            
+                raise exception(f'Кассир не получен в запросе, кассир по умолчанию не установлен')            
         else:
             driver.setParam(1021, cashier.get("cashierName"))
             #driver.setParam(1203, "665811557830")

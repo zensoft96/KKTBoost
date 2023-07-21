@@ -1,4 +1,5 @@
 from time import sleep
+from warnings import catch_warnings
 from flask import Flask, flash, request, render_template, Response, redirect, url_for
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
@@ -99,13 +100,20 @@ def jobs_in_thread(queuejobs: deque):
             jobname = firstjob.get('jobname')
             jobparameters = firstjob.get('parameters')
             jobid = firstjob.get('jobid')
-            nowjob = jf.Job(jobname=jobname, jobid=jobid, jobparameters=jobparameters)
-            result = nowjob.completeTask()
-            if not result:
-                queuejobs.append(nowjob.task_to_dict())
-            else:
-                resultjob = Doned_jobs.insert(jobid=jobid, resulttext=result, recieved=False)
-                resultjob.execute()
+            jobrotate = firstjob.get('jobrotate')
+            nowjob = jf.Job(jobname=jobname, jobid=jobid, jobparameters=jobparameters, jobrotate=jobrotate)
+            if nowjob.jobrotate < 30:
+                try:
+                    result = nowjob.completeTask()
+                    if not result:
+                        queuejobs.append(nowjob.task_to_dict())
+                    else:
+                        resultjob = Doned_jobs.insert(jobid=jobid, resulttext=result, recieved=False)
+                        resultjob.execute()
+                except:
+                    pass
+            #Иначе пусть пропадает из очереди в небытие попробовал 30 раз
+            
                 
 
 def returnedjson(success=True, descr=''):
@@ -284,14 +292,36 @@ def saveCashier():
 @app.route("/check", methods=['POST'])
 def checkstatus():
     if request.content_type == 'application/x-www-form-urlencoded':
-        settings = kkt.setkktsettingsfromform(request.form)
-        initedkkt = kkt.initKKT(settings)
-        return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
+        try:    
+            kassa = kkt.Kassa()
+            initedkkt = kassa.initkkt(kwargs=request.form)
+        except Exception as error:
+            flash(str(error))
+            settings = initedkkt.get('parameters')
+            return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
                                    tested = initedkkt.get('succes'), 
-                                   error = initedkkt.get('descr'))
+                                   error = initedkkt.get('errordesc'))
+        if initedkkt.get('success'):
+            flash('Выполнено успешно')
+            settings = initedkkt.get('parameters')
+            return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
+                                   port = settings.get('LIBFPTR_SETTING_PORT'), 
+                                   com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
+                                   baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
+                                   tested = initedkkt.get('succes'), 
+                                   error = initedkkt.get('errordesc'))
+        else:
+            flash(f"Возникли ошибки {initedkkt.get('errordesc')}")
+            settings = initedkkt.get('parameters')
+            return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
+                                   port = settings.get('LIBFPTR_SETTING_PORT'), 
+                                   com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
+                                   baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
+                                   tested = initedkkt.get('succes'), 
+                                   error = initedkkt.get('errordesc'))
         
 @app.route("/openShift", methods=['POST'])
 def openShift():
@@ -316,7 +346,7 @@ def openShift():
         try:
             with kkt.Kassa() as kassa:        
                 cashier = request.json.get('cashier')
-                shiftresult = kassa.openShift(cashier=cashier[0])
+                shiftresult = kassa.openShift(cashier=cashier)
                 returnedJson = json.dumps(shiftresult, ensure_ascii=False)
                 if shiftresult.get('success'):
                     rc = 200
@@ -353,7 +383,7 @@ def closeShift():
         try:
             with kkt.Kassa() as kassa:        
                 cashier = request.json.get('cashier')
-                shiftresult = kassa.closeShift(cashier=cashier[0])
+                shiftresult = kassa.closeShift(cashier=cashier)
                 returnedJson = json.dumps(shiftresult, ensure_ascii=False)
                 if shiftresult.get('success'):
                     rc = 200
@@ -396,32 +426,87 @@ def receipt():
         with kkt.Kassa() as kassa:
             if checkType.upper().find('CORR') != -1:
                     receiptResult = kassa.receipt(checkType=checkType, 
-                                cashier={'cashierName': cashier[0]['cashierName'],
-                                        'INN': cashier[0]['INN']},
+                                cashier=cashier,
                                 electronnically=electronnically, sno=sno, cashsum=cashsum, 
                                 goods=goods,cashelesssum=cashelesssum, #taxsum=taxsum, 
                                 corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum)
             else:
                 receiptResult = kassa.receipt(checkType=checkType, 
-                                        cashier={'cashierName': cashier[0]['cashierName'],
-                                                'INN': cashier[0]['INN']},
+                                        cashier=cashier,
                                         electronnically=electronnically,
                                         sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum)
                                         #taxsum=taxsum)
                                         
-            return receiptResult
-    except Exception as KKTErr:
-        return f'Ошибка кассы {KKTErr}'
-    # initedkkt = kkt.initKKT(None)
-    # if initedkkt.get('succes'):
-    #     if len(jobs) > 0:
-    #         return ('ККТ в работе. Повторите попытку позже.')
-    #     jobs.appendleft({'jobname':'receipt'})
-    #     driver = initedkkt.get('driver')
-    #     jobs.pop()
-    #     return receiptResult
-    # else:
-    #     return returnedjson(False, f'Ошибка инициализации драйвера {initedkkt.get("descr")}')
+            if receiptResult.get('success'):
+                response = app.response_class(
+                    response=json.dumps(receiptResult, ensure_ascii=False),
+                    status=200, content_type='application/json')
+            else:
+                response = app.response_class(
+                    response=json.dumps(receiptResult, ensure_ascii=False),
+                    status=500, content_type='application/json')
+    except Exception as ErrMessage:
+                    if isinstance(ErrMessage,type(kkt.KassaCriticalError())):
+                        response = app.response_class(response=f'Ошибка инициализации ККТ {ErrMessage.args[0]}',
+                                                      status=500,
+                                                      content_type='application/json'
+                                                      )
+                        return response
+                    elif isinstance(ErrMessage,type(kkt.KassaBusyError())):
+                        if checkType.upper().find('CORR') != -1:
+                            jobid = str(uuid.uuid4())
+                            dictJob = {
+                                'jobname': 'receipt',
+                                'jobid': jobid,
+                                'jobrotate': 0,
+                                'parameters':{
+                                    'checkType': checkType,
+                                    'electronnically': electronnically,
+                                    'cashier': cashier,
+                                    'sno': sno,
+                                    'cashsum': cashsum,
+                                    'goods': goods,
+                                    'cashelesssum': cashelesssum,
+                                    'corrType': corrType, 
+                                    'corrBaseDate': corrBaseDate, 
+                                    'corrBaseNum': corrBaseNum
+                                    }
+                            }
+                            jobs.append(dictJob)
+                            jobsDict = {'success':False, 
+                                        'error':f'Ошибка при выполнении запроса {ErrMessage}.', 
+                                        'jobid':jobid}
+                            respJson = json.dumps(jobsDict, ensure_ascii=False)
+                            response = app.response_class(response=respJson,
+                                                        status=503, 
+                                                        content_type='application/json')
+                            return response
+                        else:
+                            jobid = str(uuid.uuid4())
+                            dictJob = {
+                                'jobname': 'receipt',
+                                'jobid': jobid,
+                                'jobrotate': 0,
+                                'parameters':{
+                                    'checkType': checkType, 
+                                    'cashier': cashier,
+                                    'electronnically': electronnically,
+                                    'sno': sno, 
+                                    'cashsum':cashsum, 
+                                    'goods': goods,
+                                    'cashelesssum': cashelesssum
+                                    }
+                            }
+                            jobs.append(dictJob)
+                            jobsDict = {'success':False, 
+                                        'error':f'Ошибка при выполнении запроса {ErrMessage}.', 
+                                        'jobid':jobid}
+                            respJson = json.dumps(jobsDict, ensure_ascii=False)
+                            response = app.response_class(response=respJson,
+                                                        status=503, 
+                                                        content_type='application/json')
+                            return response
+
 
 @app.route("/statusShift", methods=['POST'])
 def statusShift():

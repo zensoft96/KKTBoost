@@ -1,4 +1,5 @@
 from time import sleep
+from warnings import catch_warnings
 from flask import Flask, flash, request, render_template, Response, redirect, url_for
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
@@ -291,14 +292,36 @@ def saveCashier():
 @app.route("/check", methods=['POST'])
 def checkstatus():
     if request.content_type == 'application/x-www-form-urlencoded':
-        settings = kkt.setkktsettingsfromform(request.form)
-        initedkkt = kkt.initKKT(settings)
-        return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
+        try:    
+            kassa = kkt.Kassa()
+            initedkkt = kassa.initkkt(kwargs=request.form)
+        except Exception as error:
+            flash(str(error))
+            settings = initedkkt.get('parameters')
+            return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
                                    tested = initedkkt.get('succes'), 
-                                   error = initedkkt.get('descr'))
+                                   error = initedkkt.get('errordesc'))
+        if initedkkt.get('success'):
+            flash('Выполнено успешно')
+            settings = initedkkt.get('parameters')
+            return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
+                                   port = settings.get('LIBFPTR_SETTING_PORT'), 
+                                   com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
+                                   baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
+                                   tested = initedkkt.get('succes'), 
+                                   error = initedkkt.get('errordesc'))
+        else:
+            flash(f"Возникли ошибки {initedkkt.get('errordesc')}")
+            settings = initedkkt.get('parameters')
+            return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
+                                   port = settings.get('LIBFPTR_SETTING_PORT'), 
+                                   com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
+                                   baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
+                                   tested = initedkkt.get('succes'), 
+                                   error = initedkkt.get('errordesc'))
         
 @app.route("/openShift", methods=['POST'])
 def openShift():

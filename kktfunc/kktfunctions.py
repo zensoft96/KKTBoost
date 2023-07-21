@@ -27,6 +27,49 @@ class Kassa():
     # def __del__(self):
     #     print('Закрытие ресурса')
 
+    def initkkt(self, **kwargs):
+        settings = kwargs.get('kwargs')
+        if Kassa().__busy:
+            return self.creturnDict(False, settings, 'Касса занята, выполните запрос позже')
+        else:
+            fptr = IFptr("")
+            Kassa().__setBusy()
+            try:
+                settingsDict = {}
+                for current_setting in settings:
+                    if current_setting == 'cashier':
+                        CURRENT_SETTING = current_setting
+                        CURRENT_SETTING_VALUE = settings[CURRENT_SETTING]
+                    else:
+                        CURRENT_SETTING = IFptr.__getattribute__(IFptr, current_setting)
+                        if CURRENT_SETTING != 'ComFile':
+                            CURRENT_SETTING_VALUE = IFptr.__getattribute__(IFptr, settings[current_setting])
+                        else:
+                            CURRENT_SETTING_VALUE = settings[current_setting]
+                    settingsDict[CURRENT_SETTING]=CURRENT_SETTING_VALUE
+            except Exception as ex:
+                Kassa.__unsetBusy()
+                return self.creturnDict(
+                    False, 
+                    settings, 
+                    f'Ошибка разбора словаря, проверьте правильность передачи параметров {str(ex)}')
+            fptr.setSettings(settingsDict)
+            fptr.open()
+            if fptr.isOpened():
+                fptr.close()
+                Kassa.__unsetBusy()
+                return self.creturnDict(True, settings, errordesc='')
+            else:
+                #Неудачно соединились, вернуть exit
+                fptr.close()
+                Kassa.__unsetBusy()
+                return self.creturnDict(
+                    False,
+                    settings,
+                    f'Проблема инициализации драйвера возможно ККТ выключена')
+            
+
+
     def checkTypeClass(self, checkType):
         checkTypes = {
             "SELL":IFptr.LIBFPTR_RT_SELL,
@@ -39,6 +82,7 @@ class Kassa():
             "BUYRETURNCORR": IFptr.LIBFPTR_RT_BUY_RETURN_CORRECTION
         }
         return checkTypes.get(checkType)
+    
     
     #Получить настройки ККТ
     def getkktsettings(self):
@@ -526,6 +570,7 @@ class Kassa():
         
     def __enter__(self):
         if not Kassa().__busy:
+            self.settings = self.getkktsettings()
             fptr = IFptr("")
             fptr.setSettings(self.settings)
             fptr.open()
@@ -559,6 +604,7 @@ class Kassa():
     @classmethod
     def __unsetBusy(cls):
         cls.__busy = False
+        
         
 if __name__ == '__main__':
     print('Not for start')

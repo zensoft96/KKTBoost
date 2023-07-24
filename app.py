@@ -441,71 +441,30 @@ def receipt():
                 response = app.response_class(
                     response=json.dumps(receiptResult, ensure_ascii=False),
                     status=200, content_type='application/json')
+                return response
             else:
                 response = app.response_class(
                     response=json.dumps(receiptResult, ensure_ascii=False),
                     status=500, content_type='application/json')
+                return response
     except Exception as ErrMessage:
                     if isinstance(ErrMessage,type(kkt.KassaCriticalError())):
-                        response = app.response_class(response=f'Ошибка инициализации ККТ {ErrMessage.args[0]}',
+                        respJson = json.dumps({
+                                'success': False,
+                                'error': f'Ошибка инициализации ККТ {ErrMessage.args[0]}'}, ensure_ascii=False)
+                        response = app.response_class(response=respJson,
                                                       status=500,
                                                       content_type='application/json'
                                                       )
                         return response
                     elif isinstance(ErrMessage,type(kkt.KassaBusyError())):
-                        if checkType.upper().find('CORR') != -1:
-                            jobid = str(uuid.uuid4())
-                            dictJob = {
-                                'jobname': 'receipt',
-                                'jobid': jobid,
-                                'jobrotate': 0,
-                                'parameters':{
-                                    'checkType': checkType,
-                                    'electronnically': electronnically,
-                                    'cashier': cashier,
-                                    'sno': sno,
-                                    'cashsum': cashsum,
-                                    'goods': goods,
-                                    'cashelesssum': cashelesssum,
-                                    'corrType': corrType, 
-                                    'corrBaseDate': corrBaseDate, 
-                                    'corrBaseNum': corrBaseNum
-                                    }
-                            }
-                            jobs.append(dictJob)
-                            jobsDict = {'success':False, 
-                                        'error':f'Ошибка при выполнении запроса {ErrMessage}.', 
-                                        'jobid':jobid}
-                            respJson = json.dumps(jobsDict, ensure_ascii=False)
-                            response = app.response_class(response=respJson,
+                        respJson = json.dumps({
+                                'success': False,
+                                'error': 'Касса занята, повторите позже.'}, ensure_ascii=False)
+                        response = app.response_class(response=respJson,
                                                         status=503, 
                                                         content_type='application/json')
-                            return response
-                        else:
-                            jobid = str(uuid.uuid4())
-                            dictJob = {
-                                'jobname': 'receipt',
-                                'jobid': jobid,
-                                'jobrotate': 0,
-                                'parameters':{
-                                    'checkType': checkType, 
-                                    'cashier': cashier,
-                                    'electronnically': electronnically,
-                                    'sno': sno, 
-                                    'cashsum':cashsum, 
-                                    'goods': goods,
-                                    'cashelesssum': cashelesssum
-                                    }
-                            }
-                            jobs.append(dictJob)
-                            jobsDict = {'success':False, 
-                                        'error':f'Ошибка при выполнении запроса {ErrMessage}.', 
-                                        'jobid':jobid}
-                            respJson = json.dumps(jobsDict, ensure_ascii=False)
-                            response = app.response_class(response=respJson,
-                                                        status=503, 
-                                                        content_type='application/json')
-                            return response
+                        return response
 
 
 @app.route("/statusShift", methods=['POST'])

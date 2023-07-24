@@ -312,7 +312,7 @@ class Kassa():
                         'receiptType' : driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE),
                         'receiptSum' : driver.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
                         'fiscalSign' : driver.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN),
-                        'dateTime' : driver.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME),
+                        'dateTime' : str(driver.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)),
                         'shiftNumber': driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER),
                         'receiptNumber': driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)}
             return resultDict
@@ -444,10 +444,18 @@ class Kassa():
         except Exception as SetCashierError:
             return self.creturnDict(False, {}, SetCashierError)
         driver.openShift()
+        shiftState = driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_STATE)
+        shiftDict = {}
+        shiftDict['Closed'] = shiftState == IFptr.LIBFPTR_SS_CLOSED
+        shiftDict['Expired'] = shiftState == IFptr.LIBFPTR_SS_EXPIRED
+        shiftDict['Opened'] = shiftState == IFptr.LIBFPTR_SS_OPENED
+        shiftDict['shiftNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER)
+        shiftDict['receiptNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)               
         if driver.errorCode() == 0:
-            return self.creturnDict(True,{},None)
+            return self.creturnDict(True, shiftDict, None)
         else:
             return self.creturnDict(False,{}, f'Ошибка при открытии смены {driver.errorDescription()}')
+        
             
         
     #Закрытие смены
@@ -460,10 +468,18 @@ class Kassa():
         if driver.isOpened():
             driver.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
             driver.report()
+            shiftState = driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_STATE)
+            shiftDict = {}
+            shiftDict['Closed'] = shiftState == IFptr.LIBFPTR_SS_CLOSED
+            shiftDict['Expired'] = shiftState == IFptr.LIBFPTR_SS_EXPIRED
+            shiftDict['Opened'] = shiftState == IFptr.LIBFPTR_SS_OPENED
+            shiftDict['shiftNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER)
+            shiftDict['receiptNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)               
             if driver.errorCode() == 0:
-                return self.creturnDict(True, {}, None)
+                return self.creturnDict(True, shiftDict, None)
             else:
-                return self.creturnDict(False,{}, f'{driver.errorDescription()}')
+                return self.creturnDict(False, {}, f'{driver.errorDescription()}')
+        
         else:
             return self.creturnDict(False,{}, f'Ошибка проверки обр к драйверу {driver.errorDescription()}')
     

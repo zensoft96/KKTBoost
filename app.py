@@ -237,11 +237,13 @@ def settings():
                 current_settings.save()
             
             settingsdict[current_settings.setting] = current_settings.settingvalue
+        flash('Сохранение выполнено успешно!')
         return render_template('settings.html', disabled = 'disabled', 
                                model=settingsdict.get('LIBFPTR_SETTING_MODEL'),
                                    port = settingsdict.get('LIBFPTR_SETTING_PORT'), 
                                    com = settingsdict.get('LIBFPTR_SETTING_COM_FILE'), 
-                                   baud = settingsdict.get('LIBFPTR_SETTING_BAUDRATE'))
+                                   baud = settingsdict.get('LIBFPTR_SETTING_BAUDRATE'),
+                                   tested = True)
     elif request.method == 'GET':
         current_settings = Settings.select().dicts()
         cashier = ''
@@ -282,8 +284,10 @@ def saveCashier():
             else:
                 current_setting.setting = 'cashier'
                 current_setting.settingvalue = cashier
-                current_setting.save()
-        return redirect(url_for('settings'), 301)
+                current_setting.save()    
+        flash('Сохранение выполнено успешно!')
+        return render_template('settings.html', tested = True)
+        # return redirect(url_for('settings'), 301)
     else:
         response = app.response_class(response='Метод не поддерживается.',
                                                  status=405)
@@ -302,7 +306,7 @@ def checkstatus():
                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
-                                   tested = initedkkt.get('succes'), 
+                                   tested = initedkkt.get('success'), 
                                    error = initedkkt.get('errordesc'))
         if initedkkt.get('success'):
             flash('Выполнено успешно')
@@ -311,7 +315,7 @@ def checkstatus():
                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
-                                   tested = initedkkt.get('succes'), 
+                                   tested = initedkkt.get('success'), 
                                    error = initedkkt.get('errordesc'))
         else:
             flash(f"Возникли ошибки {initedkkt.get('errordesc')}")
@@ -320,7 +324,7 @@ def checkstatus():
                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
-                                   tested = initedkkt.get('succes'), 
+                                   tested = initedkkt.get('success'), 
                                    error = initedkkt.get('errordesc'))
         
 @app.route("/openShift", methods=['POST'])
@@ -409,6 +413,7 @@ def receipt():
         cashier = request.json['cashier']
         # taxsum = float(request.json['taxsum'])
         cashelesssum = float(request.json['cashelesssum'])
+        prepaidsum = float(request.json['prepaidsum'])
         if checkType.upper().find('CORR') != -1:
             corrType = request.json["correctionType"]
             corrBaseDate = request.json["correctionBaseDate"]
@@ -428,13 +433,14 @@ def receipt():
                     receiptResult = kassa.receipt(checkType=checkType, 
                                 cashier=cashier,
                                 electronnically=electronnically, sno=sno, cashsum=cashsum, 
-                                goods=goods,cashelesssum=cashelesssum, #taxsum=taxsum, 
+                                goods=goods,cashelesssum=cashelesssum, prepaidsum=prepaidsum, #taxsum=taxsum, 
                                 corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum)
             else:
                 receiptResult = kassa.receipt(checkType=checkType, 
                                         cashier=cashier,
                                         electronnically=electronnically,
-                                        sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum)
+                                        sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
+                                        prepaidsum=prepaidsum)
                                         #taxsum=taxsum)
                                         
             if receiptResult.get('success'):

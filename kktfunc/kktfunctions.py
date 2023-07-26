@@ -118,15 +118,23 @@ class Kassa():
                 
         return shiftDict
     
+    def getTaxSettings(self):
+        taxationType = self.driver.getParamInt(1062)
+        return self.snoClass(taxationType)
+
+
     def snoClass(self, sno):
-        snoDict = {
-            0:IFptr.LIBFPTR_TT_OSN,
-            1:IFptr.LIBFPTR_TT_USN_INCOME,
-            2:IFptr.LIBFPTR_TT_USN_INCOME_OUTCOME,
-            3:IFptr.LIBFPTR_TT_ESN,
-            4:IFptr.LIBFPTR_TT_PATENT
+        if sno == 999: 
+            return self.getTaxSettings()
+        else: 
+            snoDict = {
+                0:IFptr.LIBFPTR_TT_OSN,
+                1:IFptr.LIBFPTR_TT_USN_INCOME,
+                2:IFptr.LIBFPTR_TT_USN_INCOME_OUTCOME,
+                3:IFptr.LIBFPTR_TT_ESN,
+                4:IFptr.LIBFPTR_TT_PATENT
                 }
-        return snoDict[sno]
+            return snoDict[sno]
     
     
     def tax(self, strtax:str):
@@ -143,7 +151,7 @@ class Kassa():
     
     
     def receipt(self, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
-            cashelesssum: float, #taxsum:float, 
+            cashelesssum: float, prepaidsum: float, #taxsum:float, 
             corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0'):
         """Формирование чека состоит из следующих операций:
         открытие чека и передача реквизитов чека;
@@ -250,6 +258,10 @@ class Kassa():
         elif cashsum > 0:
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CASH)
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, cashsum)
+            driver.payment()
+        elif prepaidsum > 0:
+            driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID)
+            driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, prepaidsum)
             driver.payment()
         else: return 'Нет сумм чека'
         

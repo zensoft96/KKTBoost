@@ -122,10 +122,17 @@ def returnedjson(success=True, descr=''):
 
 @app.route("/")
 def hello():
+    statusJSON = statusShift()
+    status = json.loads(statusJSON.response[0])['shiftStatus']
+    if status == 3 or status == 2:
+        closed = False
+    elif status == 1:
+        closed = True
+    
     if request.method == 'POST':
         return request.form
     elif request.method == 'GET':
-        return render_template('index.html')
+        return render_template('index.html', closed=closed)
     else:
         response = app.response_class(response='Метод не поддерживается',
                                       status=405, content_type='application/json')

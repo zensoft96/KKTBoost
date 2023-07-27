@@ -228,3 +228,8 @@ tbody tr:nth-child(even) {
     width: 8vw;
     height: 3vh;
 }
+
+.btn.disabled {
+    color: rgb(63, 63, 63);
+    background-color: rgb(170, 184, 196);
+}

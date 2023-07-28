@@ -19,12 +19,13 @@
     </nav> 
     <div class='main'>
         {% block buttons %} 
+            
             <div class='buttons'>
                 <form action="/openShift" method="POST">
-                    <input class='btn' type='submit' value='Открыть смену'>
+                    <input class={% if not closed %} 'btn disabled' {% else %} 'btn' {% endif %} type='submit' value='Открыть смену' {% if not closed %} disabled {% endif %} >
                 </form>    
                 <form action="/closeShift" method="POST">
-                    <input class='btn' type='submit' value='Закрыть смену'>
+                    <input class={% if closed %} 'btn disabled' {% else %} 'btn' {% endif %} type='submit' value='Закрыть смену' {% if closed %} disabled {% endif %} >
                 </form> 
             </div>
         {% endblock %} 

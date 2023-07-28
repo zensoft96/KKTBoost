@@ -317,16 +317,25 @@ class Kassa():
         #Все проверки пройдены, чек есть, запрашиваем параметры
         driver.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_LAST_RECEIPT)
         driver.fnQueryData()
+        # driver.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_LAST_DOCUMENT)
+        # driver.fnQueryData()
         if driver.errorCode() == 0:
+            # driver.setParam(IFptr.LIBFPTR_PARAM_DATA_TYPE, IFptr.LIBFPTR_DT_RECEIPT_STATE)
+            # driver.queryData()
             resultDict = {
                         'success': True,
                         'documentNumber' : driver.getParamInt(IFptr.LIBFPTR_PARAM_DOCUMENT_NUMBER),
                         'receiptType' : driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE),
-                        'receiptSum' : driver.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM),
                         'fiscalSign' : driver.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN),
-                        'dateTime' : str(driver.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)),
-                        'shiftNumber': driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER),
-                        'receiptNumber': driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)}
+                        }
+            driver.setParam(IFptr.LIBFPTR_PARAM_DATA_TYPE, IFptr.LIBFPTR_DT_RECEIPT_STATE)
+            driver.queryData()
+            resultDict['receiptSum'] = driver.getParamDouble(IFptr.LIBFPTR_PARAM_RECEIPT_SUM)
+            resultDict['dateTime'] = str(driver.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME))
+            resultDict['receiptNumber'] = driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)
+            driver.setParam(IFptr.LIBFPTR_PARAM_DATA_TYPE, IFptr.LIBFPTR_DT_SHIFT_STATE)
+            driver.queryData()
+            resultDict['shiftNumber']  = driver.getParamInt(IFptr.LIBFPTR_PARAM_SHIFT_NUMBER)
             return resultDict
         else:
             return {

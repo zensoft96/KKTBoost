@@ -49,7 +49,9 @@ body {
 }
 
 .main {
-    
+    overflow-y: scroll;
+    overflow-x: auto;
+    height: 88vh;
 }
 
 .btn {
@@ -152,6 +154,10 @@ th {
     font-size: 2vh;
     font-style: bold;
     font-family: Times New Roman;
+    position: -webkit-sticky;
+    position: sticky;
+    z-index: 2;
+    top: 0;
 }
 
 tr, td {
@@ -227,4 +233,9 @@ tbody tr:nth-child(even) {
 #closeDialog {
     width: 8vw;
     height: 3vh;
+}
+
+.btn.disabled {
+    color: rgb(63, 63, 63);
+    background-color: rgb(170, 184, 196);
 }

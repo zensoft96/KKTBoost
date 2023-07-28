@@ -126,12 +126,12 @@
     {% if tested == False %}
         {% set message = error %}
     {% elif tested == True %}
-        {% set message = 'Проверка прошла успешно!' %}
+        {% set message = get_flashed_messages()[0] %}
     {% endif %}
     {% if tested == True or tested == False %}
         
                 
-                
+            
         <dialog class='message_win' open>
         <div class='message_win_content'>
             {{ message }}

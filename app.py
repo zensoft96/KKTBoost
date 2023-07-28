@@ -418,6 +418,7 @@ def receipt():
         cashsum = float(request.json['cashsum'])
         goods = request.json['goods']
         cashier = request.json['cashier']
+        prepaidsum = float(request.json['prepaidsum'])
         # taxsum = float(request.json['taxsum'])
         cashelesssum = float(request.json['cashelesssum'])
         prepaidsum = float(request.json['prepaidsum'])
@@ -446,8 +447,7 @@ def receipt():
                 receiptResult = kassa.receipt(checkType=checkType, 
                                         cashier=cashier,
                                         electronnically=electronnically,
-                                        sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
-                                        prepaidsum=prepaidsum)
+                                        sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,  prepaidsum=prepaidsum)
                                         #taxsum=taxsum)
                                         
             if receiptResult.get('success'):

@@ -345,14 +345,14 @@ def openShift():
                     shiftresult = kassa.openShift(None)
                     if shiftresult.get('success'):
                         flash('Смена успешно открыта')
-                        return render_template('index.html')
+                        return render_template('index.html', closed=False)
                     else:
                         flash(f'Ошибка при открытии смены. {shiftresult.get("errordesc")}')
-                        return render_template('index.html')
+                        return render_template('index.html', closed=True)
         except Exception as ErrMessage:
                     errorStr = f'Ошибка при октрытии смены на ККТ {ErrMessage.args[0]}'
                     flash(errorStr)
-                    return render_template('index.html')
+                    return render_template('index.html', closed=True)
     else:
         try:
             with kkt.Kassa() as kassa:        
@@ -382,14 +382,14 @@ def closeShift():
                 shiftresult = kassa.closeShift(None)
                 if shiftresult.get('success'):
                     flash('Смена успешно Закрыта')
-                    return render_template('index.html')
+                    return render_template('index.html', closed=True)
                 else:
                     flash(f'Ошибка при закрытии смены. {shiftresult.get("errordesc")}')
-                    return render_template('index.html')
+                    return render_template('index.html', closed=False)
         except Exception as ErrMessage:
                     errorStr = f'Ошибка при закрытии смены на ККТ. {ErrMessage.args[0]}'
                     flash(errorStr)
-                    return render_template('index.html')
+                    return render_template('index.html', closed=False)
     else:
         try:
             with kkt.Kassa() as kassa:        

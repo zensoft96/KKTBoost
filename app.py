@@ -123,20 +123,25 @@ def returnedjson(success=True, descr=''):
 @app.route("/")
 def hello():
     statusJSON = statusShift()
-    status = json.loads(statusJSON.response[0])['shiftStatus']
-    if status == 3 or status == 2:
-        closed = False
-    elif status == 1:
-        closed = True
-    
-    if request.method == 'POST':
-        return request.form
-    elif request.method == 'GET':
+    if statusJSON.status_code == 503:
+        flash('Нет настроенной ккт')
+        closed = None
         return render_template('index.html', closed=closed)
     else:
-        response = app.response_class(response='Метод не поддерживается',
-                                      status=405, content_type='application/json')
-        return response
+        status = json.loads(statusJSON.response[0])['shiftStatus']
+        if status == 3 or status == 2:
+            closed = False
+        elif status == 1:
+            closed = True
+        
+        if request.method == 'POST':
+            return request.form
+        elif request.method == 'GET':
+            return render_template('index.html', closed=closed)
+        else:
+            response = app.response_class(response='Метод не поддерживается',
+                                        status=405, content_type='application/json')
+            return response
 
 @app.route('/jobresult/<job_id>', methods=['GET'])
 def getjob(job_id:str):
@@ -176,19 +181,26 @@ def props():
             sleep(5)
         try:
             with kkt.Kassa() as kassa:
-                kkt_props = kassa.kktproperties()
-                return render_template("props.html", allprops = kkt_props)
+                if len(kassa.settings) > 1:
+                    kkt_props = kassa.kktproperties()
+                    return render_template("props.html", allprops = kkt_props)
+                else:
+                    flash(f'Нет настроек ККТ в базе, зайдите в web и выполните начальную настройку кассы')
+                    return redirect(url_for("hello"), code=302)
+                
         except Exception as ErrMessage:
                 if isinstance(ErrMessage,type(kkt.KassaCriticalError())):
                     flash(f'Ошибка инициализации драйвера {ErrMessage.args[0]}')
                     response = app.response_class(response=f'Ошибка инициализации драйвера. {ErrMessage.args[0]}',
-                                                 status=203)
-                    return response
+                                                status=203)
+                    # return response
+                    return redirect(url_for("hello"), code=302)
                 elif isinstance(ErrMessage,type(kkt.KassaBusyError())):
                     flash(f'Касса занята, дождитесь выполнения задачи и обновите страницу {ErrMessage.args[0]}')
                     response = app.response_class(response=f'Касса занята, дождитесь выполнения задачи и обновите страницу. {ErrMessage.args[0]}',
-                                                 status=203)
-                    return response
+                                                status=203)
+                    # return response
+                    return redirect(url_for("hello"), code=302)
     else:
         response = app.response_class(response='Метод не поддерживается.',
                                                  status=405)
@@ -244,17 +256,19 @@ def settings():
                 current_settings.save()
             
             settingsdict[current_settings.setting] = current_settings.settingvalue
+        setting_cashier = Settings.get_or_none(Settings.setting == "cashier")
         flash('Сохранение выполнено успешно!')
         return render_template('settings.html', disabled = 'disabled', 
                                model=settingsdict.get('LIBFPTR_SETTING_MODEL'),
                                    port = settingsdict.get('LIBFPTR_SETTING_PORT'), 
                                    com = settingsdict.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settingsdict.get('LIBFPTR_SETTING_BAUDRATE'),
+                                   cashier = setting_cashier.settingvalue if setting_cashier is not None else setting_cashier,
                                    tested = True)
     elif request.method == 'GET':
         current_settings = Settings.select().dicts()
         cashier = ''
-        if len(current_settings) > 0:
+        if len(current_settings) > 1:
             for current_setting in current_settings:
                 if current_setting.get('setting') == 'LIBFPTR_SETTING_MODEL':
                     LIBFPTR_SETTING_MODEL = current_setting['settingvalue']
@@ -272,6 +286,8 @@ def settings():
             return render_template('settings.html', disabled = 'disabled', model=LIBFPTR_SETTING_MODEL,
                                    port = LIBFPTR_SETTING_PORT, com = LIBFPTR_SETTING_COM_FILE, 
                                    baud = LIBFPTR_SETTING_BAUDRATE, cashier = cashier)
+        elif len(current_settings) == 1:
+            return render_template('settings.html', cashier = current_settings[0]['settingvalue'], disabled = 'disabled')
         else:
             return render_template('settings.html', disabled = 'disabled')
     else:
@@ -292,8 +308,31 @@ def saveCashier():
                 current_setting.setting = 'cashier'
                 current_setting.settingvalue = cashier
                 current_setting.save()    
-        flash('Сохранение выполнено успешно!')
-        return render_template('settings.html', tested = True)
+        current_settings = Settings.select().dicts()
+        
+        if len(current_settings) > 1:
+            cashier = ''
+            for current_setting in current_settings:
+                if current_setting.get('setting') == 'LIBFPTR_SETTING_MODEL':
+                    LIBFPTR_SETTING_MODEL = current_setting['settingvalue']
+                elif current_setting.get('setting') == 'LIBFPTR_SETTING_PORT':
+                    LIBFPTR_SETTING_PORT = current_setting['settingvalue']
+                elif current_setting.get('setting') == 'LIBFPTR_SETTING_COM_FILE':
+                    LIBFPTR_SETTING_COM_FILE = current_setting['settingvalue']
+                elif current_setting.get('setting') == 'LIBFPTR_SETTING_BAUDRATE':
+                    LIBFPTR_SETTING_BAUDRATE = current_setting['settingvalue']
+                elif current_setting.get('setting') == 'cashier':
+                    cashier = current_setting['settingvalue']     
+            flash('Сохранение выполнено успешно!')
+            return render_template('settings.html', model=LIBFPTR_SETTING_MODEL,
+                                    port = LIBFPTR_SETTING_PORT, com = LIBFPTR_SETTING_COM_FILE, 
+                                    baud = LIBFPTR_SETTING_BAUDRATE, cashier = cashier, tested = True)
+        elif len(current_settings) == 1:
+            flash('Сохранение выполнено успешно!')
+            return render_template('settings.html', cashier = cashier, tested = True)
+        else:
+            # flash('Сохранение выполнено успешно!')
+            return render_template('settings.html', tested = True)
         # return redirect(url_for('settings'), 301)
     else:
         response = app.response_class(response='Метод не поддерживается.',
@@ -303,37 +342,52 @@ def saveCashier():
 @app.route("/check", methods=['POST'])
 def checkstatus():
     if request.content_type == 'application/x-www-form-urlencoded':
+        kassa = None
         try:    
             kassa = kkt.Kassa()
             initedkkt = kassa.initkkt(kwargs=request.form)
         except Exception as error:
             flash(str(error))
-            settings = initedkkt.get('parameters')
-            return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
-                                   port = settings.get('LIBFPTR_SETTING_PORT'), 
-                                   com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
-                                   baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
-                                   tested = initedkkt.get('success'), 
-                                   error = initedkkt.get('errordesc'))
+            if kassa is not None:
+                settings = initedkkt.get('parameters')
+                setting_cashier = Settings.get_or_none(Settings.setting == 'cashier')
+
+                return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
+                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
+                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
+                                    baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
+                                    cashier = setting_cashier.settingvalue if setting_cashier is not None else setting_cashier,
+                                    tested = initedkkt.get('success'), 
+                                    error = initedkkt.get('errordesc'))
+            else:
+                return render_template('settings.html',  
+                                    tested = False, 
+                                    error = error)
         if initedkkt.get('success'):
             flash('Выполнено успешно')
             settings = initedkkt.get('parameters')
+            setting_cashier = Settings.get_or_none(Settings.setting == 'cashier')
+
             return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
+                                   cashier = setting_cashier.settingvalue if setting_cashier is not None else setting_cashier,
                                    tested = initedkkt.get('success'), 
                                    error = initedkkt.get('errordesc'))
         else:
             flash(f"Возникли ошибки {initedkkt.get('errordesc')}")
             settings = initedkkt.get('parameters')
+            setting_cashier = Settings.get_or_none(Settings.setting == 'cashier')
+
             return render_template('settings.html', model=settings.get('LIBFPTR_SETTING_MODEL'),
                                    port = settings.get('LIBFPTR_SETTING_PORT'), 
                                    com = settings.get('LIBFPTR_SETTING_COM_FILE'), 
                                    baud = settings.get('LIBFPTR_SETTING_BAUDRATE'), 
+                                   cashier = setting_cashier.settingvalue if setting_cashier is not None else setting_cashier,
                                    tested = initedkkt.get('success'), 
                                    error = initedkkt.get('errordesc'))
-        
+          
 @app.route("/openShift", methods=['POST'])
 def openShift():
     if request.content_type == 'application/x-www-form-urlencoded':
@@ -419,6 +473,7 @@ def receipt():
         goods = request.json['goods']
         cashier = request.json['cashier']
         # taxsum = float(request.json['taxsum'])
+        docsum = int(request.json['documentSum'])
         cashelesssum = float(request.json['cashelesssum'])
         prepaidsum = float(request.json['prepaidsum'])
         if checkType.upper().find('CORR') != -1:
@@ -441,13 +496,13 @@ def receipt():
                                 cashier=cashier,
                                 electronnically=electronnically, sno=sno, cashsum=cashsum, 
                                 goods=goods,cashelesssum=cashelesssum, prepaidsum=prepaidsum, #taxsum=taxsum, 
-                                corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum)
+                                corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum, docsum = docsum)
             else:
                 receiptResult = kassa.receipt(checkType=checkType, 
                                         cashier=cashier,
                                         electronnically=electronnically,
                                         sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
-                                        prepaidsum=prepaidsum)
+                                        prepaidsum=prepaidsum, docsum = docsum)
                                         #taxsum=taxsum)
                                         
             if receiptResult.get('success'):
@@ -484,29 +539,34 @@ def receipt():
 def statusShift():
     try:
         with kkt.Kassa() as kassa:
-            shiftResult = kassa.checkShift()
-            if shiftResult is not None:
-                retCode = 0 
-                if shiftResult.get('Expired'):
-                    retCode = 3
-                elif shiftResult.get('Opened') and not shiftResult.get('Expired'):
-                    retCode = 2
-                elif shiftResult.get('Closed'):
-                    retCode = 1
-                returnDict = {}
-                returnDict['success'] = True
-                returnDict['shiftStatus'] = retCode
-                returnDict['shiftNumber'] = shiftResult.get('shiftNumber')
-                returnDict['receiptNumber'] = shiftResult.get('receiptNumber')
-                retJson = json.dumps(returnDict, ensure_ascii=False)
-                response = app.response_class(response=retJson, status=200, content_type='application/json')
-                return response
+            if len(kassa.settings) > 1:
+                shiftResult = kassa.checkShift()
+                if shiftResult is not None:
+                    retCode = 0 
+                    if shiftResult.get('Expired'):
+                        retCode = 3
+                    elif shiftResult.get('Opened') and not shiftResult.get('Expired'):
+                        retCode = 2
+                    elif shiftResult.get('Closed'):
+                        retCode = 1
+                    returnDict = {}
+                    returnDict['success'] = True
+                    returnDict['shiftStatus'] = retCode
+                    returnDict['shiftNumber'] = shiftResult.get('shiftNumber')
+                    returnDict['receiptNumber'] = shiftResult.get('receiptNumber')
+                    retJson = json.dumps(returnDict, ensure_ascii=False)
+                    response = app.response_class(response=retJson, status=200, content_type='application/json')
+                    return response
+                else:
+                    returnDict = {}
+                    returnDict['success'] = False
+                    retJson = json.dumps(returnDict)
+                    response = app.response_class(response=retJson, status=503, content_type='application/json')
+                    return response
             else:
-                returnDict = {}
-                returnDict['success'] = False
-                retJson = json.dumps(returnDict)
-                response = app.response_class(response=retJson, status=503, content_type='application/json')
-                return response
+                response = app.response_class(response=f'Нет настроек ККТ в базе, зайдите в web и выполните начальную настройку кассы',
+                                                status=503, content_type='application/json')
+                return response   
     except Exception as ErrMessage:
             response = app.response_class(response=f'Ошибка при выполнении запроса {ErrMessage}.',
                                             status=503, content_type='application/json')

@@ -22,7 +22,8 @@ class Kassa():
     __busy = False
         
     def __init__(self) -> None:
-        self.settings = self.getkktsettings()
+        pass
+        # self.settings = self.getkktsettings()
             
     # def __del__(self):
     #     print('Закрытие ресурса')
@@ -153,7 +154,7 @@ class Kassa():
     
     def receipt(self, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
             cashelesssum: float, prepaidsum: float, #taxsum:float, 
-            corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0'):
+            corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0', docsum: int = 0):
         """Формирование чека состоит из следующих операций:
         открытие чека и передача реквизитов чека;
         регистрация позиций, печать нефискальных данных (текст, штрихкоды, изображения);
@@ -186,6 +187,7 @@ class Kassa():
         for good in goods:
             if good.get('markingcode') is not None:
                 self.checkdm(good['markingcode'])
+                # self.checkdm('0123000011217838KdQyK;sAAAAYGdd')
         
         sumerrors = "" #Для сбора промежуточных ошибок
         self.setcashier(cashier=cashier)
@@ -212,7 +214,6 @@ class Kassa():
         driver.openReceipt()
         if driver.errorCode() > 0:
             sumerrors += f'\n {driver.errorDescription()}'
-        
         #Регистрация позиции с кодом маркировки сделать столько итераций сколько товаров
         #Соглашение, жду в словаре name - Имя товара, price - цена, quantity - количество
         # tax - Налоговая ставка, sum - Сумма, markingCode - Код маркировки(массив байт в base64)
@@ -232,7 +233,8 @@ class Kassa():
                 33 о реализуемом товаре, подлежащем маркировке средством идентификации, имеющем код маркировки, за исключением подакцизного товара
             """
             driver.setParam(1214, good['psr']) #Признак способа расчета
-            
+            # if good.get('volume') is not None:
+            #     driver.setNonPrintableParam(1229, good['volume']*20)
             # fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, 200.02)
             # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
             # fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, good['markingcode'])
@@ -252,6 +254,11 @@ class Kassa():
             
             driver.registration()
         
+        if prepaidsum > 0:
+            driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID)
+            driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, prepaidsum)
+            driver.payment()
+
         if cashelesssum > 0:
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, cashelesssum)
@@ -260,20 +267,17 @@ class Kassa():
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CASH)
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, cashsum)
             driver.payment()
-        elif prepaidsum > 0:
-            driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID)
-            driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, prepaidsum)
-            driver.payment()
         else: return 'Нет сумм чека'
         
         
-        driver.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, goodtax)
-        # fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, taxsum)
-        driver.receiptTax()
+        
+        # driver.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, goodtax)
+        # driver.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, docsum * (if ))
+        # driver.receiptTax()
         if driver.errorCode() > 0:
             sumerrors += f'\n {driver.errorDescription()}'
 
-        driver.setParam(IFptr.LIBFPTR_PARAM_SUM, 10.00)
+        driver.setParam(IFptr.LIBFPTR_PARAM_SUM, docsum)
         driver.receiptTotal()
         #Закрытие полность оплаченного чека
         driver.closeReceipt()

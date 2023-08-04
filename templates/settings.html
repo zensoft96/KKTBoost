@@ -113,7 +113,8 @@
         {% if cashier %}
             {% set cashier_name = cashier %}
         {% endif %}
-        <p class='settings_select'><input class='select_list row1' {% if cashier_name %}value={% endif %}{{ cashier }} type="text" size="25" id='cashier' name='cashier' placeholder="Введите кассира" required></p>
+ 
+        <p class='settings_select'><input class='select_list row1' {% if cashier_name %}value="{{ cashier_name }}"{% endif %} type="text" size="100" id='cashier' name='cashier' placeholder="Введите кассира" required></p>
         <div class='row2'>
         <p class='button_center'><input type="submit" value="Сохранить данные" class='btn_settings' formmethod='post' formaction='/saveCashier'></p>
         </div>

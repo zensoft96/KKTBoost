@@ -138,7 +138,6 @@ class Kassa():
             return snoDict[sno]
     
     
-    
     def tax(self, strtax:str):
         taxes = {'NO':IFptr.LIBFPTR_TAX_NO,
                 '0': IFptr.LIBFPTR_TAX_VAT0,

@@ -472,6 +472,7 @@ def receipt():
         cashsum = float(request.json['cashsum'])
         goods = request.json['goods']
         cashier = request.json['cashier']
+        prepaidsum = float(request.json['prepaidsum'])
         # taxsum = float(request.json['taxsum'])
         docsum = int(request.json['documentSum'])
         cashelesssum = float(request.json['cashelesssum'])
@@ -503,7 +504,7 @@ def receipt():
                                         electronnically=electronnically,
                                         sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
                                         prepaidsum=prepaidsum, docsum = docsum)
-                                        #taxsum=taxsum)
+
                                         
             if receiptResult.get('success'):
                 response = app.response_class(

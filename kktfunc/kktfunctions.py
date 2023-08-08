@@ -478,6 +478,8 @@ class Kassa():
         shiftDict['receiptNumber'] = self.driver.getParamInt(IFptr.LIBFPTR_PARAM_RECEIPT_NUMBER)               
         if driver.errorCode() == 0:
             return self.creturnDict(True, shiftDict, None)
+        elif driver.errorDescription().find('Смена открыта') != -1:
+            return self.creturnDict(True,{}, f'Ошибка при открытии смены {driver.errorDescription()}')
         else:
             return self.creturnDict(False,{}, f'Ошибка при открытии смены {driver.errorDescription()}')
         

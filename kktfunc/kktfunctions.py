@@ -92,6 +92,9 @@ class Kassa():
 
         """    
     # fptr.cancelMarkingCodeValidation()
+	#Проверим и автооткроем смену.
+        if self.checkShift().get('Closed'):
+            self.openShift(cashier=cashier)		    
         driver = self.driver
         for good in goods:
             if good.get('markingcode') is not None:

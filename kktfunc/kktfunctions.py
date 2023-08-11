@@ -153,7 +153,7 @@ class Kassa():
     
     def receipt(self, checkType:str, cashier:dict, electronnically:bool, sno: int, goods:list, cashsum:float, 
             cashelesssum: float, prepaidsum: float, #taxsum:float, 
-            corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0', docsum: int = 0):
+            corrType: int = 0, corrBaseDate: str = '0001.01.01', corrBaseNum: str = '0', docsum: int = 0, clientmail:str = None):
         """Формирование чека состоит из следующих операций:
         открытие чека и передача реквизитов чека;
         регистрация позиций, печать нефискальных данных (текст, штрихкоды, изображения);
@@ -200,6 +200,8 @@ class Kassa():
         driver.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, self.checkTypeClass(checkType=checkType))
         #Печатать электронный чек
         driver.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, electronnically)
+        if electronnically:
+            driver.setParam(1008, clientmail)
         #Налогообложение
         driver.setParam(1055, self.snoClass(sno=sno))
 

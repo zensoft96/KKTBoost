@@ -477,6 +477,7 @@ def receipt():
         docsum = int(request.json['documentSum'])
         cashelesssum = float(request.json['cashelesssum'])
         prepaidsum = float(request.json['prepaidsum'])
+        clientmail = request.json['clientmail']
         if checkType.upper().find('CORR') != -1:
             corrType = request.json["correctionType"]
             corrBaseDate = request.json["correctionBaseDate"]
@@ -497,13 +498,14 @@ def receipt():
                                 cashier=cashier,
                                 electronnically=electronnically, sno=sno, cashsum=cashsum, 
                                 goods=goods,cashelesssum=cashelesssum, prepaidsum=prepaidsum, #taxsum=taxsum, 
-                                corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum, docsum = docsum)
+                                corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum, docsum = docsum,
+                                clientmail=clientmail)
             else:
                 receiptResult = kassa.receipt(checkType=checkType, 
                                         cashier=cashier,
                                         electronnically=electronnically,
                                         sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
-                                        prepaidsum=prepaidsum, docsum = docsum)
+                                        prepaidsum=prepaidsum, docsum = docsum, clientmail=clientmail)
 
                                         
             if receiptResult.get('success'):

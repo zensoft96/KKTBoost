@@ -113,7 +113,8 @@
         {% if cashier %}
             {% set cashier_name = cashier %}
         {% endif %}
-        <p class='settings_select'><input class='select_list row1' {% if cashier_name %}value={% endif %}{{ cashier }} type="text" size="25" id='cashier' name='cashier' placeholder="Введите кассира" required></p>
+ 
+        <p class='settings_select'><input class='select_list row1' {% if cashier_name %}value="{{ cashier_name }}"{% endif %} type="text" size="100" id='cashier' name='cashier' placeholder="Введите кассира" required></p>
         <div class='row2'>
         <p class='button_center'><input type="submit" value="Сохранить данные" class='btn_settings' formmethod='post' formaction='/saveCashier'></p>
         </div>
@@ -126,12 +127,12 @@
     {% if tested == False %}
         {% set message = error %}
     {% elif tested == True %}
-        {% set message = 'Проверка прошла успешно!' %}
+        {% set message = get_flashed_messages()[0] %}
     {% endif %}
     {% if tested == True or tested == False %}
         
                 
-                
+            
         <dialog class='message_win' open>
         <div class='message_win_content'>
             {{ message }}

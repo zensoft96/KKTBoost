@@ -584,6 +584,8 @@ if __name__ == "__main__":
     jobthread = Thread(target=jobs_in_thread, args=(jobs,))
     jobthread.start()
     #jobthread.join()
+    import logging
+    logging.basicConfig(filename='error.log',level=logging.WARNING)
     app.secret_key = 'hjaskjdhkjasdhjahdkhakjdhqwkhJHHKHY*(Y*Y*(*Y))'
     app.run(debug=False, port=5000, host="0.0.0.0")
     

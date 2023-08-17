@@ -227,8 +227,9 @@ class Kassa():
             driver.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, good['quantity'])
             goodtax = self.tax(good['tax'])
             if goodtax is None:
-                return f'Не пришла налоговая ставка для {good["name"]}'
-            driver.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, goodtax)
+                sumerrors += f'\n Не пришла налоговая ставка для {good["name"]}'
+            else:
+                driver.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, goodtax)
             driver.setParam(1212, good['ppr']) 
             #Признак предмета расчета
             """30 о реализуемом подакцизном товаре, подлежащем маркировке средством идентификации, не имеющем кода маркировки

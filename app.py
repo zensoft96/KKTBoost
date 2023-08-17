@@ -1,5 +1,4 @@
 from time import sleep
-from warnings import catch_warnings
 from flask import Flask, flash, request, render_template, Response, redirect, url_for
 import kktfunc.kktfunctions as kkt
 from sql.sqlfunc import *
@@ -10,82 +9,7 @@ import jobs.jobsfunctions as jf
 
 app = Flask(__name__)
 jobs = deque([], maxlen=50)
-#Для теста задач, потом удалить нахуй
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229CgQXbjYAAAA2X9F'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229eqX4A3kAAAA0tKf'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229A4K4mtFAAAAhv8Z'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229\';r2lV"AAAAX3Id'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229ZGI+v3\'AAAAVYr8'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229r9GcX%nAAAAbIHi'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229KXAQhhFAAAAjt0m'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229!ZNntFnAAAAs++F'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229YeLyE/CAAAAG1UU'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229LEEMJiiAAAAs+ds'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229C4S*skFAAAATeNR'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'046037311752292msEGEpAAAAYng0'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229,LFRB2:AAAA5/L+'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229REr2!>SAAAA+TVy'
-# }})
-# jobs.append({'jobname':'checkmark', 
-#              'jobid': uuid.uuid4,
-#              'parameters':{
-#     'markCode':'04603731175229uGTEsgbAAAA0BEu'
-# }})
+
 
 def jobs_in_thread(queuejobs: deque):
     """Для выполнения в потоке

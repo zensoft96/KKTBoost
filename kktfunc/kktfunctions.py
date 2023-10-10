@@ -263,8 +263,7 @@ class Kassa():
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID)
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, prepaidsum)
             driver.payment()
-
-        if cashelesssum > 0:
+        elif cashelesssum > 0:
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)
             driver.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, cashelesssum)
             driver.payment()

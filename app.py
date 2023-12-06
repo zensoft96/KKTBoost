@@ -406,6 +406,7 @@ def receipt():
             corrType = request.json["correctionType"]
             corrBaseDate = request.json["correctionBaseDate"]
             corrBaseNum = request.json["correctionBaseNumber"]
+            fiskalsighn = int(request.json['fiskalSighn'])
     except ValueError:
         error_value = str(traceback.format_exc())
         split_error = error_value.split('\n')
@@ -417,13 +418,51 @@ def receipt():
 
     try:
         with kkt.Kassa() as kassa:
+            # Если Пришло SELLCORR(нужно откорректировать продажу), тогда чеки коррекции 
+            # 1. Чек коррекции возврат прихода
+            # 2. Чек коррекции прихода
+            # Если пришло SELLRETURNCORR(нужно откорректировать возврат), тогда:
+            # 1. Чек коррекции прихода
+            # 2. Чек коррекции возврат прихода
             if checkType.upper().find('CORR') != -1:
-                    receiptResult = kassa.receipt(checkType=checkType, 
-                                cashier=cashier,
-                                electronnically=electronnically, sno=sno, cashsum=cashsum, 
-                                goods=goods,cashelesssum=cashelesssum, prepaidsum=prepaidsum, #taxsum=taxsum, 
-                                corrType = corrType, corrBaseDate = corrBaseDate, corrBaseNum = corrBaseNum, docsum = docsum,
-                                clientmail=clientmail)
+                    if checkType.upper().find('SELLCORR') != -1:
+                        checkTypePhase1 = 'LIBFPTR_RT_SELL_RETURN_CORRECTION'
+                        receiptResult1 = kassa.receiptCorrectionSELL(checkType=checkTypePhase1, 
+                                            cashier=cashier,
+                                            electronnically=electronnically,
+                                            sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
+                                            prepaidsum=prepaidsum, docsum = docsum, clientmail=clientmail, corrBaseDate=corrBaseDate, corrBaseNum=corrBaseNum, fiskalSighn=fiskalsighn)
+                        checkTypePhase2 = 'LIBFPTR_RT_SELL_CORRECTION'
+                        receiptResult2 = kassa.receiptCorrectionSELL(checkType=checkTypePhase2, 
+                                            cashier=cashier,
+                                            electronnically=electronnically,
+                                            sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
+                                            prepaidsum=prepaidsum, docsum = docsum, clientmail=clientmail, corrBaseDate=corrBaseDate, corrBaseNum=corrBaseNum, fiskalSighn=fiskalsighn)
+                    elif checkType.upper().find('SELLRETURNCORR') != -1:
+                        checkTypePhase1 = 'LIBFPTR_RT_SELL_CORRECTION'
+                        checkTypePhase2 = 'LIBFPTR_RT_SELL_RETURN_CORRECTION'
+                        receiptResult1 = kassa.receiptCorrectionSELL(checkType=checkTypePhase1, 
+                                            cashier=cashier,
+                                            electronnically=electronnically,
+                                            sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
+                                            prepaidsum=prepaidsum, docsum = docsum, clientmail=clientmail, corrBaseDate=corrBaseDate, corrBaseNum=corrBaseNum, fiskalSighn=fiskalsighn)
+                        receiptResult2 = kassa.receiptCorrectionSELL(checkType=checkTypePhase2, 
+                                            cashier=cashier,
+                                            electronnically=electronnically,
+                                            sno=sno, cashsum=cashsum, goods=goods,cashelesssum=cashelesssum,
+                                            prepaidsum=prepaidsum, docsum = docsum, clientmail=clientmail, corrBaseDate=corrBaseDate, corrBaseNum=corrBaseNum, fiskalSighn=fiskalsighn)
+                    if receiptResult1.get('success') and receiptResult2.get('success'):
+                       respStructure = {}
+                       respStructure['succes'] = True
+                       respStructure['fp1'] = receiptResult1.get('fiscalSign')
+                       respStructure['fp2'] = receiptResult2.get('fiscalSign')
+                       response = app.response_class(
+                       response=json.dumps(respStructure, ensure_ascii=False),
+                       status=200, content_type='application/json')
+                    else:
+                        response = app.response_class(response=f'Проблема в чеках Фаза1: {receiptResult1.get("success")}, Фаза2: {{receiptResult1.get("success")}}', 
+                                                        status=500, content_type='application/json')
+                    return response
             else:
                 receiptResult = kassa.receipt(checkType=checkType, 
                                         cashier=cashier,
